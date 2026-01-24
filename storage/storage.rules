@@ -1,0 +1,33 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper function: file size limit
+    function isValidSize(maxSize) {
+      return request.resource.size <= maxSize;
+    }
+
+    // Helper function: file type validation
+    function isValidFileType(allowedTypes) {
+      return request.resource.contentType in allowedTypes;
+    }
+
+    // User resumes
+    match /users/{userId}/resumes/{fileName} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && isValidSize(5 * 1024 * 1024) // 5MB
+                   && isValidFileType(['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']);
+    }
+
+    // Application documents
+    match /users/{userId}/applications/{applicationId}/documents/{fileName} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && isValidSize(10 * 1024 * 1024) // 10MB
+                   && isValidFileType(['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'image/jpeg', 'image/png']);
+    }
+  }
+}
