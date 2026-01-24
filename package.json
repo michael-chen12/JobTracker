@@ -12,8 +12,6 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
     "@hookform/resolvers": "^3.9.1",
-    "firebase": "^11.1.0",
-    "firebase-admin": "^13.0.2",
     "next": "16.1.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
