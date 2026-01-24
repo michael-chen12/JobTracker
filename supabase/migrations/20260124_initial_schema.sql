@@ -2,8 +2,7 @@
 -- Created: 2026-01-24
 -- Description: PostgreSQL schema replacing Firebase Firestore
 
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Note: Using gen_random_uuid() which is built-in to PostgreSQL (no extension needed)
 
 -- =============================================
 -- USERS & PROFILES
@@ -11,7 +10,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Users table (links to auth.users)
 CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   auth_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
   email TEXT NOT NULL UNIQUE,
   display_name TEXT,
@@ -23,7 +22,7 @@ CREATE TABLE users (
 
 -- User profiles (extended user information)
 CREATE TABLE user_profiles (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE NOT NULL,
   skills TEXT[] DEFAULT '{}',
   resume_url TEXT,
@@ -42,7 +41,7 @@ CREATE TABLE user_profiles (
 
 -- User experience entries
 CREATE TABLE user_experience (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   company TEXT NOT NULL,
   position TEXT NOT NULL,
@@ -57,7 +56,7 @@ CREATE TABLE user_experience (
 
 -- User education entries
 CREATE TABLE user_education (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   institution TEXT NOT NULL,
   degree TEXT NOT NULL,
@@ -76,7 +75,7 @@ CREATE TABLE user_education (
 
 -- Applications table (main entity)
 CREATE TABLE applications (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
 
   -- Company & Position
@@ -114,7 +113,7 @@ CREATE TABLE applications (
 
 -- Application notes (replaces subcollection)
 CREATE TABLE application_notes (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   application_id UUID REFERENCES applications(id) ON DELETE CASCADE NOT NULL,
   content TEXT NOT NULL,
   note_type TEXT DEFAULT 'general' CHECK (note_type IN (
@@ -126,7 +125,7 @@ CREATE TABLE application_notes (
 
 -- Application documents (replaces subcollection)
 CREATE TABLE application_documents (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   application_id UUID REFERENCES applications(id) ON DELETE CASCADE NOT NULL,
   document_type TEXT NOT NULL CHECK (document_type IN (
     'resume', 'cover_letter', 'portfolio', 'transcript', 'other'
@@ -144,7 +143,7 @@ CREATE TABLE application_documents (
 
 -- Contacts (recruiters, hiring managers, referrals)
 CREATE TABLE contacts (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
   email TEXT,
@@ -162,7 +161,7 @@ CREATE TABLE contacts (
 
 -- Contact interactions (emails, calls, meetings)
 CREATE TABLE contact_interactions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   contact_id UUID REFERENCES contacts(id) ON DELETE CASCADE NOT NULL,
   interaction_type TEXT NOT NULL CHECK (interaction_type IN (
     'email', 'call', 'meeting', 'linkedin_message', 'other'
@@ -178,7 +177,7 @@ CREATE TABLE contact_interactions (
 
 -- Notifications
 CREATE TABLE notifications (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   notification_type TEXT NOT NULL CHECK (notification_type IN (
     'deadline', 'follow_up', 'interview', 'offer', 'general'
@@ -197,7 +196,7 @@ CREATE TABLE notifications (
 
 -- Milestones (interview rounds, offer stages)
 CREATE TABLE milestones (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   application_id UUID REFERENCES applications(id) ON DELETE CASCADE NOT NULL,
   milestone_type TEXT NOT NULL CHECK (milestone_type IN (
     'phone_screen', 'technical_interview', 'onsite_interview',
@@ -212,7 +211,7 @@ CREATE TABLE milestones (
 
 -- AI usage tracking (for Anthropic API calls)
 CREATE TABLE ai_usage (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   operation TEXT NOT NULL, -- 'resume_parse', 'job_match', 'note_summary'
   tokens_used INTEGER,
@@ -222,7 +221,7 @@ CREATE TABLE ai_usage (
 
 -- Insights (AI-generated career insights)
 CREATE TABLE insights (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   insight_type TEXT NOT NULL CHECK (insight_type IN (
     'skill_gap', 'application_pattern', 'success_rate', 'recommendation'
