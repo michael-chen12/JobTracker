@@ -37,34 +37,35 @@ export function DashboardClient({
   const handleSuccess = () => {
     // Refresh the page to show the new application
     router.refresh();
-    // Also refetch with current filters
-    handleFilterChange(filters);
+    // Reset filters and refetch all applications
+    setFilters({});
+    handleFilterChange({});
   };
 
   const handleFilterChange = useCallback(
     async (newFilters: Partial<GetApplicationsParams>) => {
-      setFilters((prevFilters) => {
-        const updatedFilters = { ...prevFilters, ...newFilters };
+      const updatedFilters = { ...filters, ...newFilters };
+      setFilters(updatedFilters);
 
-        setLoading(true);
-        getApplications(updatedFilters)
-          .then((result) => {
-            if (result.data && result.pagination) {
-              setApplications(result.data);
-              setPagination(result.pagination);
-            }
-          })
-          .catch((err) => {
-            console.error('Error fetching applications:', err);
-          })
-          .finally(() => {
-            setLoading(false);
-          });
+      // Show loading skeleton immediately
+      setLoading(true);
 
-        return updatedFilters;
-      });
+      // Fetch from server
+      getApplications(updatedFilters)
+        .then((result) => {
+          if (result.data && result.pagination) {
+            setApplications(result.data);
+            setPagination(result.pagination);
+          }
+        })
+        .catch((err) => {
+          console.error('Error fetching applications:', err);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     },
-    []
+    [filters]
   );
 
   const totalApplications = initialPagination.total;
@@ -165,6 +166,7 @@ export function DashboardClient({
               data={applications}
               pagination={pagination}
               onFilterChange={handleFilterChange}
+              loading={loading}
             />
           )}
         </div>

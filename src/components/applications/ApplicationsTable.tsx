@@ -19,6 +19,7 @@ import {
 import { columns, type ApplicationRow } from './columns';
 import { TableToolbar } from './TableToolbar';
 import { TablePagination } from './TablePagination';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ApplicationsTableProps {
   data: ApplicationRow[];
@@ -33,12 +34,14 @@ interface ApplicationsTableProps {
     status?: string[];
     page?: number;
   }) => void;
+  loading?: boolean;
 }
 
 export function ApplicationsTable({
   data,
   pagination,
   onFilterChange,
+  loading = false,
 }: ApplicationsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -78,7 +81,31 @@ export function ApplicationsTable({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {loading ? (
+              // Show skeleton rows while loading
+              Array.from({ length: 5 }).map((_, index) => (
+                <TableRow key={`skeleton-${index}`}>
+                  <TableCell>
+                    <Skeleton className="h-4 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-40" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-28" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}

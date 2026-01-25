@@ -19,4 +19,5 @@ Build an employer-grade job application tracker with AI assistance (resume parsi
 ## Rules
 - Always use Context7 when dealing with documentation. Grab the latest documentation and apply it.
 - When designing UI/UX, always think and verify if similar components had exist.
-- Suggest commands and subagents for even more efficiency when dealing with implementing feature and tickets
+- Suggest commands and subagents for even more efficiency when dealing with implementing feature and tickets.
+- Always ask me question and give me multiple answers.
