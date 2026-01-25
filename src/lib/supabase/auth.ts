@@ -1,9 +1,13 @@
 import { createClient } from './client';
-import { createClient as createServerClient } from './server';
+
+/**
+ * Client-side auth utilities
+ * These functions should only be called from Client Components
+ */
 
 /**
  * Sign in with Google OAuth
- * Opens OAuth flow in new window/redirect
+ * Opens OAuth flow and redirects to callback
  */
 export async function signInWithGoogle() {
   const supabase = createClient();
@@ -34,36 +38,4 @@ export async function signOut() {
   if (error) {
     throw error;
   }
-}
-
-/**
- * Get current user from server context
- * Returns null if not authenticated
- */
-export async function getUser() {
-  const supabase = await createServerClient();
-
-  const { data: { user }, error } = await supabase.auth.getUser();
-
-  if (error) {
-    return null;
-  }
-
-  return user;
-}
-
-/**
- * Get current session from server context
- * Returns null if no active session
- */
-export async function getSession() {
-  const supabase = await createServerClient();
-
-  const { data: { session }, error } = await supabase.auth.getSession();
-
-  if (error) {
-    return null;
-  }
-
-  return session;
 }
