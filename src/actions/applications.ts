@@ -15,23 +15,32 @@ import {
  * Create a new job application
  */
 export async function createApplication(data: CreateApplicationInput) {
+  console.log('=== SERVER ACTION: createApplication ===');
+  console.log('Received data:', data);
+
   try {
     // Validate input
+    console.log('Validating with Zod schema...');
     const validatedData = createApplicationSchema.parse(data);
+    console.log('Validation passed:', validatedData);
 
     const supabase = await createClient();
 
     // Get current user
+    console.log('Getting authenticated user...');
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
+      console.log('Auth error or no user:', authError);
       return { error: 'Unauthorized' };
     }
+    console.log('User authenticated:', user.id);
 
     // Get user's database ID
+    console.log('Fetching user database ID...');
     const { data: dbUser, error: userError } = await supabase
       .from('users')
       .select('id')
@@ -39,10 +48,13 @@ export async function createApplication(data: CreateApplicationInput) {
       .single();
 
     if (userError || !dbUser) {
+      console.log('User lookup error:', userError);
       return { error: 'User not found' };
     }
+    console.log('Database user ID:', dbUser.id);
 
     // Insert application
+    console.log('Inserting application into database...');
     const { data: application, error } = await supabase
       .from('applications')
       .insert({
@@ -53,16 +65,17 @@ export async function createApplication(data: CreateApplicationInput) {
       .single();
 
     if (error) {
-      console.error('Error creating application:', error);
+      console.error('Database insert error:', error);
       return { error: error.message };
     }
 
+    console.log('Application created successfully:', application.id);
     revalidatePath('/dashboard');
     revalidatePath('/applications');
 
     return { data: application };
   } catch (error) {
-    console.error('Error creating application:', error);
+    console.error('Exception in createApplication:', error);
     return { error: 'Failed to create application' };
   }
 }

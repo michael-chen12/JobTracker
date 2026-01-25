@@ -126,31 +126,44 @@ JobApplicationApp/
 │   │   ├── globals.css                # Tailwind imports and global styles
 │   │   └── not-found.tsx              # 404 page
 │   ├── components/                    # Reusable UI components
-│   │   ├── ui/                        # shadcn/ui components
-│   │   │   ├── button.tsx
-│   │   │   ├── dialog.tsx
-│   │   │   ├── dropdown-menu.tsx
-│   │   │   ├── input.tsx
-│   │   │   ├── select.tsx
-│   │   │   ├── table.tsx
-│   │   │   ├── toast.tsx
-│   │   │   └── ... (other shadcn components)
+│   │   ├── ui/                        # shadcn/ui components (installed)
+│   │   │   ├── button.tsx             # ✅ Button component
+│   │   │   ├── dialog.tsx             # ✅ Modal/Dialog component
+│   │   │   ├── form.tsx               # ✅ React Hook Form wrapper
+│   │   │   ├── input.tsx              # ✅ Text input component
+│   │   │   ├── textarea.tsx           # ✅ Multi-line text input
+│   │   │   ├── select.tsx             # ✅ Dropdown select component
+│   │   │   ├── label.tsx              # ✅ Form label component
+│   │   │   ├── calendar.tsx           # ✅ Date picker component
+│   │   │   ├── popover.tsx            # ✅ Popover component
+│   │   │   ├── collapsible.tsx        # ✅ Collapsible section component
+│   │   │   ├── toast.tsx              # ✅ Toast notification component
+│   │   │   └── toaster.tsx            # ✅ Toast container component
 │   │   ├── applications/
-│   │   │   ├── ApplicationCard.tsx    # Application card for kanban
-│   │   │   ├── ApplicationTable.tsx   # TanStack Table wrapper
-│   │   │   ├── ApplicationForm.tsx    # Create/edit form
-│   │   │   ├── KanbanBoard.tsx        # Kanban view with dnd-kit
-│   │   │   ├── StatusBadge.tsx        # Color-coded status badge
-│   │   │   └── MatchScoreBadge.tsx    # AI match score display
+│   │   │   ├── ApplicationFormDialog.tsx  # ✅ Main form for creating applications
+│   │   │   ├── FormSection.tsx            # ✅ Visual grouping for form fields
+│   │   │   ├── SalaryRangeInput.tsx       # ✅ Compound salary range input (min/max/currency)
+│   │   │   ├── TwoColumnRow.tsx           # ✅ Responsive two-column grid layout
+│   │   │   ├── ApplicationCard.tsx        # TODO: Application card for kanban
+│   │   │   ├── ApplicationTable.tsx       # TODO: TanStack Table wrapper
+│   │   │   ├── KanbanBoard.tsx            # TODO: Kanban view with dnd-kit
+│   │   │   ├── StatusBadge.tsx            # TODO: Color-coded status badge
+│   │   │   └── MatchScoreBadge.tsx        # TODO: AI match score display
 │   │   ├── contacts/
 │   │   │   ├── ContactCard.tsx
 │   │   │   ├── ContactForm.tsx
 │   │   │   └── InteractionTimeline.tsx
+│   │   ├── notes/
+│   │   │   ├── NotesSection.tsx           # ✅ Main notes orchestrator with collapsible section
+│   │   │   ├── NotesList.tsx              # ✅ Notes list container with empty state
+│   │   │   ├── NoteItem.tsx               # ✅ Individual note with expand/delete
+│   │   │   └── AddNoteForm.tsx            # ✅ Inline note creation form
 │   │   ├── dashboard/
-│   │   │   ├── MetricsCard.tsx        # Analytics metric display
-│   │   │   ├── ApplicationTrendChart.tsx
-│   │   │   ├── StatusPieChart.tsx
-│   │   │   └── WinsCelebration.tsx    # Milestone celebration modal
+│   │   │   ├── DashboardClient.tsx        # ✅ Client component with form dialog and notes integration
+│   │   │   ├── MetricsCard.tsx            # TODO: Analytics metric display
+│   │   │   ├── ApplicationTrendChart.tsx  # TODO: Trend visualization
+│   │   │   ├── StatusPieChart.tsx         # TODO: Status distribution chart
+│   │   │   └── WinsCelebration.tsx        # TODO: Milestone celebration modal
 │   │   ├── layout/
 │   │   │   ├── Navbar.tsx             # Top navigation bar
 │   │   │   ├── Sidebar.tsx            # Side navigation (desktop)
@@ -182,6 +195,7 @@ JobApplicationApp/
 │   │   │   ├── date.ts                # Date formatting utilities
 │   │   │   ├── validation.ts          # Common validation helpers
 │   │   │   ├── format.ts              # Number/currency formatting
+│   │   │   ├── noteHelpers.ts         # ✅ Note formatting, colors, relative time
 │   │   │   └── cn.ts                  # Tailwind class name merger
 │   │   └── constants.ts               # App-wide constants
 │   ├── types/                         # TypeScript type definitions
