@@ -32,9 +32,9 @@ export const noteTypeSchema = z.enum([
 
 // Salary range schema
 export const salaryRangeSchema = z.object({
-  min: z.number().min(0),
-  max: z.number().min(0),
-  currency: z.string().length(3), // ISO 4217 currency code (USD, EUR, etc.)
+  min: z.number().min(0).optional(),
+  max: z.number().min(0).optional(),
+  currency: z.string().length(3).default('USD'), // ISO 4217 currency code (USD, EUR, etc.)
 });
 
 // Application creation schema
@@ -47,8 +47,14 @@ export const createApplicationSchema = z.object({
   job_type: jobTypeSchema.optional(),
   status: applicationStatusSchema.default('applied'),
   salary_range: salaryRangeSchema.optional(),
-  applied_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD format').optional(),
-  deadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD format').optional(),
+  applied_date: z
+    .string()
+    .optional()
+    .transform((val) => (val === '' ? undefined : val)),
+  deadline: z
+    .string()
+    .optional()
+    .transform((val) => (val === '' ? undefined : val)),
   priority: applicationPrioritySchema.default('medium'),
   source: z.string().max(100).optional(),
   referral_name: z.string().max(255).optional(),

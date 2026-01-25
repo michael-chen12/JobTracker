@@ -157,10 +157,28 @@ export async function deleteApplication(id: string) {
   }
 }
 
+export interface GetApplicationsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: 'company' | 'position' | 'status' | 'applied_date' | 'created_at';
+  sortOrder?: 'asc' | 'desc';
+  status?: string[];
+  search?: string;
+}
+
 /**
- * Get all applications for the current user
+ * Get all applications for the current user with filtering, sorting, and pagination
  */
-export async function getApplications() {
+export async function getApplications(params: GetApplicationsParams = {}) {
+  const {
+    page = 1,
+    limit = 20,
+    sortBy = 'created_at',
+    sortOrder = 'desc',
+    status,
+    search,
+  } = params;
+
   try {
     const supabase = await createClient();
 
@@ -173,23 +191,51 @@ export async function getApplications() {
       return { error: 'Unauthorized' };
     }
 
-    // Get applications with notes (using RLS)
-    const { data: applications, error } = await supabase
+    // Build query with count for pagination
+    let query = supabase
       .from('applications')
       .select(
         `
         *,
         notes:application_notes(*)
-      `
-      )
-      .order('created_at', { ascending: false });
+      `,
+        { count: 'exact' }
+      );
+
+    // Apply status filter
+    if (status && status.length > 0) {
+      query = query.in('status', status);
+    }
+
+    // Apply search filter (case-insensitive search on company and position)
+    if (search && search.trim()) {
+      query = query.or(`company.ilike.%${search}%,position.ilike.%${search}%`);
+    }
+
+    // Apply sorting
+    query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+
+    // Apply pagination
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    query = query.range(from, to);
+
+    const { data: applications, error, count } = await query;
 
     if (error) {
       console.error('Error fetching applications:', error);
       return { error: error.message };
     }
 
-    return { data: applications };
+    return {
+      data: applications,
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit),
+      },
+    };
   } catch (error) {
     console.error('Error fetching applications:', error);
     return { error: 'Failed to fetch applications' };

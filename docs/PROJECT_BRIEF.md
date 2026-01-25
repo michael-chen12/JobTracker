@@ -77,10 +77,10 @@ Reduce the stress and uncertainty of job hunting by providing actionable intelli
 - React Hook Form + Zod validation
 
 **Backend & Infrastructure:**
-- Firebase Auth (Google, LinkedIn, Microsoft OAuth)
-- Cloud Firestore (NoSQL database)
-- Firebase Storage (document uploads)
-- Firebase App Hosting (deployment)
+- Supabase Auth (Google, LinkedIn, Microsoft OAuth)
+- Supabase PostgreSQL (relational database with real-time)
+- Supabase Storage (document uploads)
+- Vercel (deployment and hosting)
 
 **AI Integration:**
 - Anthropic Claude Sonnet 4.5 via API
@@ -94,6 +94,7 @@ Reduce the stress and uncertainty of job hunting by providing actionable intelli
 
 **Security:**
 - Role-based access control (job seeker vs. recruiter)
+- PostgreSQL Row Level Security (RLS) policies
 - GDPR compliance (data export, right to deletion)
 - PII redaction before AI processing
 - Input validation at all API boundaries

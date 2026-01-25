@@ -14,7 +14,7 @@
                               ↓ ↑
 ┌─────────────────────────────────────────────────────────────────┐
 │                      Authentication Layer                        │
-│              Firebase Auth (Google, LinkedIn, Microsoft)         │
+│              Supabase Auth (Google, LinkedIn, Microsoft)         │
 │  - Session management                                           │
 │  - JWT tokens                                                   │
 │  - Role-based access control                                    │
@@ -31,15 +31,15 @@
                               ↓ ↑
 ┌──────────────────────┬────────────────────┬─────────────────────┐
 │   Data Layer         │    Storage Layer   │    AI Layer         │
-│   Cloud Firestore    │  Firebase Storage  │  Anthropic Claude   │
-│   - NoSQL database   │  - File uploads    │  - Resume parsing   │
+│   Supabase           │  Supabase Storage  │  Anthropic Claude   │
+│   - PostgreSQL DB    │  - File uploads    │  - Resume parsing   │
 │   - Real-time sync   │  - Signed URLs     │  - Job matching     │
-│   - Security rules   │  - CORS config     │  - Summarization    │
+│   - RLS policies     │  - CORS config     │  - Summarization    │
 └──────────────────────┴────────────────────┴─────────────────────┘
                               ↓ ↑
 ┌─────────────────────────────────────────────────────────────────┐
 │                      Deployment & Hosting                        │
-│            Firebase App Hosting + Cloud Functions                │
+│                      Vercel (Edge Network)                       │
 │  - Continuous deployment                                        │
 │  - Auto-scaling                                                 │
 │  - CDN distribution                                             │
@@ -50,12 +50,12 @@
 1. User fills form in `/dashboard` (Client Component)
 2. Form submission triggers Server Action `createApplication()`
 3. Server Action validates input with Zod schema
-4. Middleware verifies Firebase Auth JWT token
-5. Server Action writes to Firestore `applications` collection
-6. Firestore security rules verify `userId` matches authenticated user
+4. Middleware verifies Supabase Auth JWT token
+5. Server Action writes to PostgreSQL `applications` table via Supabase client
+6. PostgreSQL RLS policies verify `user_id` matches authenticated user
 7. Server Action triggers AI job matching (async, background)
 8. Optimistic UI update shows new application immediately
-9. Real-time listener updates dashboard when Firestore confirms write
+9. Real-time listener updates dashboard when Supabase confirms write
 
 ---
 
@@ -68,7 +68,7 @@ JobApplicationApp/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml                     # CI: lint, build, test on PR
-│       └── deploy.yml                 # CD: deploy to Firebase on merge to main
+│       └── deploy.yml                 # CD: deploy to Vercel on merge to main
 ├── public/
 │   ├── images/                        # Static images, logos
 │   └── favicon.ico
@@ -179,11 +179,11 @@ JobApplicationApp/
 │   │       ├── LoginForm.tsx
 │   │       └── AuthProvider.tsx       # Client-side auth context
 │   ├── lib/                           # Utilities and configurations
-│   │   ├── firebase/
-│   │   │   ├── client.ts              # Firebase client SDK config
-│   │   │   ├── admin.ts               # Firebase Admin SDK config (server)
+│   │   ├── supabase/
+│   │   │   ├── client.ts              # Supabase client SDK config
+│   │   │   ├── server.ts              # Supabase server client config
 │   │   │   ├── auth.ts                # Auth utilities
-│   │   │   ├── firestore.ts           # Firestore helper functions
+│   │   │   ├── database.ts            # Database helper functions
 │   │   │   └── storage.ts             # Storage helper functions
 │   │   ├── ai/
 │   │   │   ├── anthropic.ts           # Claude API client wrapper
@@ -206,8 +206,8 @@ JobApplicationApp/
 │   │   └── index.ts                   # Barrel export
 │   ├── hooks/                         # Custom React hooks
 │   │   ├── useAuth.ts                 # Auth state hook
-│   │   ├── useApplications.ts         # Firestore applications hook
-│   │   ├── useContacts.ts             # Firestore contacts hook
+│   │   ├── useApplications.ts         # Supabase applications hook
+│   │   ├── useContacts.ts             # Supabase contacts hook
 │   │   ├── useDebounce.ts             # Debounce hook
 │   │   └── useLocalStorage.ts         # LocalStorage hook
 │   ├── actions/                       # Server Actions
@@ -234,29 +234,24 @@ JobApplicationApp/
 │   ├── integration/
 │   │   ├── api/
 │   │   │   └── applications.test.ts
-│   │   └── firestore/
-│   │       └── security-rules.test.ts
+│   │   └── database/
+│   │       └── rls-policies.test.ts
 │   └── e2e/
 │       ├── auth.spec.ts               # E2E: login, signup, logout
 │       ├── application-crud.spec.ts   # E2E: create, edit, delete app
 │       ├── kanban.spec.ts             # E2E: drag-drop, status change
 │       └── ai-features.spec.ts        # E2E: resume upload, job match
-├── firestore/
-│   ├── firestore.rules                # Firestore security rules
-│   └── firestore.indexes.json         # Composite index definitions
-├── storage/
-│   └── storage.rules                  # Firebase Storage security rules
-├── functions/                         # Cloud Functions (optional)
-│   ├── src/
-│   │   ├── index.ts                   # Function exports
-│   │   ├── scheduled/
-│   │   │   └── generate-insights.ts   # Daily insights generation
-│   │   └── triggers/
-│   │       └── on-application-create.ts # Firestore trigger for AI matching
-│   └── package.json
+├── supabase/
+│   ├── migrations/                    # Database migration files
+│   │   └── *.sql                      # SQL migration scripts
+│   ├── functions/                     # Supabase Edge Functions (optional)
+│   │   ├── generate-insights/
+│   │   │   └── index.ts               # Daily insights generation
+│   │   └── on-application-create/
+│   │       └── index.ts               # Database trigger for AI matching
+│   └── config.toml                    # Supabase configuration
 ├── .env.example                       # Environment variables template
 ├── .env.local                         # Local environment variables (gitignored)
-├── firebase.json                      # Firebase project configuration
 ├── next.config.ts                     # Next.js configuration
 ├── tailwind.config.ts                 # Tailwind CSS configuration
 ├── tsconfig.json                      # TypeScript configuration
@@ -271,212 +266,216 @@ JobApplicationApp/
 
 ---
 
-## Data Model (Firestore Collections)
+## Data Model (PostgreSQL Tables)
 
-### Collections Structure
+### Database Schema
 
+```sql
+-- Users table (managed by Supabase Auth)
+CREATE TABLE public.users (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT UNIQUE NOT NULL,
+  display_name TEXT,
+  photo_url TEXT,
+  role TEXT CHECK (role IN ('job_seeker', 'recruiter')) DEFAULT 'job_seeker',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- User profiles table
+CREATE TABLE public.profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  skills TEXT[] DEFAULT '{}',
+  experience JSONB DEFAULT '[]',  -- Array of {company, title, startDate, endDate, description}
+  education JSONB DEFAULT '[]',   -- Array of {institution, degree, field, graduationDate}
+  contact JSONB,                  -- {email, phone, linkedin}
+  resume_url TEXT,                -- Supabase Storage URL
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id)
+);
+
+-- User settings table
+CREATE TABLE public.user_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  notifications JSONB DEFAULT '{"email": true, "push": false, "followUpReminders": true}',
+  privacy JSONB DEFAULT '{"dataSharing": false}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id)
+);
+-- Applications table
+CREATE TABLE public.applications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  company TEXT NOT NULL,
+  position TEXT NOT NULL,
+  status TEXT CHECK (status IN ('applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn')) DEFAULT 'applied',
+  location TEXT,
+  work_mode TEXT CHECK (work_mode IN ('remote', 'hybrid', 'onsite')),
+  salary JSONB,                        -- {min, max, currency}
+  application_date TIMESTAMPTZ NOT NULL,
+  job_url TEXT,
+  job_description TEXT,
+  match_score INTEGER CHECK (match_score >= 0 AND match_score <= 100),
+  match_analysis JSONB,                -- {matchingSkills, missingSkills, experienceMatch, explanation}
+  next_follow_up TIMESTAMPTZ,
+  tags TEXT[] DEFAULT '{}',
+  referral_contact_id UUID REFERENCES public.contacts(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  deleted_at TIMESTAMPTZ               -- Soft delete
+);
+
+-- Application notes table
+CREATE TABLE public.application_notes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  application_id UUID NOT NULL REFERENCES public.applications(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Application documents table
+CREATE TABLE public.application_documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  application_id UUID NOT NULL REFERENCES public.applications(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  type TEXT CHECK (type IN ('cover_letter', 'portfolio', 'correspondence', 'other')) DEFAULT 'other',
+  storage_url TEXT NOT NULL,           -- Supabase Storage URL
+  size BIGINT NOT NULL,                -- Bytes
+  uploaded_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Application interactions table (future)
+CREATE TABLE public.application_interactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  application_id UUID NOT NULL REFERENCES public.applications(id) ON DELETE CASCADE,
+  type TEXT CHECK (type IN ('email', 'call', 'interview')) NOT NULL,
+  date TIMESTAMPTZ NOT NULL,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+-- Contacts table
+CREATE TABLE public.contacts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  company TEXT,
+  title TEXT,
+  linkedin_url TEXT,
+  notes TEXT,
+  tags TEXT[] DEFAULT '{}',
+  relationship_strength INTEGER CHECK (relationship_strength >= 0 AND relationship_strength <= 100) DEFAULT 0,
+  last_interaction TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Contact interactions table
+CREATE TABLE public.contact_interactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  contact_id UUID NOT NULL REFERENCES public.contacts(id) ON DELETE CASCADE,
+  type TEXT CHECK (type IN ('email_sent', 'email_received', 'call', 'meeting', 'linkedin_message')) NOT NULL,
+  date TIMESTAMPTZ NOT NULL,
+  notes TEXT,
+  outcome TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+-- Notifications table
+CREATE TABLE public.notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  type TEXT CHECK (type IN ('follow_up', 'milestone', 'insight')) NOT NULL,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  read BOOLEAN DEFAULT FALSE,
+  action_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  expires_at TIMESTAMPTZ
+);
+
+-- Milestones table
+CREATE TABLE public.milestones (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  type TEXT CHECK (type IN ('first_application', 'first_response', 'first_interview', '10_applications', 'first_offer')) NOT NULL,
+  achieved_at TIMESTAMPTZ DEFAULT NOW(),
+  metadata JSONB DEFAULT '{}'
+);
+
+-- AI usage tracking table
+CREATE TABLE public.ai_usage (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  operation TEXT CHECK (operation IN ('resume_parse', 'job_match', 'summarize_notes', 'follow_up_suggest')) NOT NULL,
+  tokens_used INTEGER NOT NULL,
+  cost DECIMAL(10, 6) NOT NULL,        -- USD
+  success BOOLEAN DEFAULT TRUE,
+  timestamp TIMESTAMPTZ DEFAULT NOW(),
+  metadata JSONB DEFAULT '{}'          -- {cachedPrompt, modelVersion}
+);
+
+-- Insights table (generated by Edge Functions)
+CREATE TABLE public.insights (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  week_of TIMESTAMPTZ NOT NULL,
+  metrics JSONB NOT NULL,              -- {applicationsSubmitted, responsesReceived, interviewsScheduled, averageMatchScore}
+  burnout_signals TEXT[] DEFAULT '{}', -- e.g., ["high_volume", "low_responses"]
+  suggestions TEXT[] DEFAULT '{}',
+  generated_at TIMESTAMPTZ DEFAULT NOW()
+);
 ```
-firestore/
-├── users/                             # Top-level collection
-│   └── {userId}/
-│       ├── email: string
-│       ├── displayName: string
-│       ├── photoURL: string
-│       ├── role: 'job_seeker' | 'recruiter'
-│       ├── createdAt: Timestamp
-│       ├── updatedAt: Timestamp
-│       ├── profile/                   # Subcollection
-│       │   └── {profileId}/           # Single document 'main'
-│       │       ├── skills: string[]
-│       │       ├── experience: Array<{
-│       │       │     company: string
-│       │       │     title: string
-│       │       │     startDate: string
-│       │       │     endDate: string | null
-│       │       │     description: string
-│       │       │   }>
-│       │       ├── education: Array<{
-│       │       │     institution: string
-│       │       │     degree: string
-│       │       │     field: string
-│       │       │     graduationDate: string
-│       │       │   }>
-│       │       ├── contact: {
-│       │       │     email: string
-│       │       │     phone: string
-│       │       │     linkedin: string
-│       │       │   }
-│       │       └── resumeUrl: string  # Firebase Storage URL
-│       └── settings/
-│           └── {settingsId}/          # Single document 'preferences'
-│               ├── notifications: {
-│               │     email: boolean
-│               │     push: boolean
-│               │     followUpReminders: boolean
-│               │   }
-│               └── privacy: {
-│                     dataSharing: boolean
-│                   }
-├── applications/                      # Top-level collection
-│   └── {applicationId}/
-│       ├── userId: string             # Indexed
-│       ├── company: string
-│       ├── position: string
-│       ├── status: 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn'
-│       ├── location: string | null
-│       ├── workMode: 'remote' | 'hybrid' | 'onsite' | null
-│       ├── salary: {
-│       │     min: number | null
-│       │     max: number | null
-│       │     currency: string
-│       │   } | null
-│       ├── applicationDate: Timestamp # Indexed
-│       ├── jobUrl: string | null
-│       ├── jobDescription: string | null
-│       ├── matchScore: number | null  # 0-100
-│       ├── matchAnalysis: {
-│       │     matchingSkills: string[]
-│       │     missingSkills: string[]
-│       │     experienceMatch: number
-│       │     explanation: string
-│       │   } | null
-│       ├── nextFollowUp: Timestamp | null
-│       ├── tags: string[]
-│       ├── referralContactId: string | null # Reference to contacts collection
-│       ├── createdAt: Timestamp
-│       ├── updatedAt: Timestamp
-│       ├── deletedAt: Timestamp | null # Soft delete
-│       ├── notes/                     # Subcollection
-│       │   └── {noteId}/
-│       │       ├── content: string
-│       │       ├── createdAt: Timestamp
-│       │       └── updatedAt: Timestamp
-│       ├── documents/                 # Subcollection
-│       │   └── {documentId}/
-│       │       ├── name: string
-│       │       ├── type: 'cover_letter' | 'portfolio' | 'correspondence' | 'other'
-│       │       ├── storageUrl: string # Firebase Storage URL
-│       │       ├── size: number       # Bytes
-│       │       └── uploadedAt: Timestamp
-│       └── interactions/              # Subcollection (future)
-│           └── {interactionId}/
-│               ├── type: 'email' | 'call' | 'interview'
-│               ├── date: Timestamp
-│               └── notes: string
-├── contacts/                          # Top-level collection
-│   └── {contactId}/
-│       ├── userId: string             # Indexed
-│       ├── name: string
-│       ├── email: string | null
-│       ├── phone: string | null
-│       ├── company: string | null
-│       ├── title: string | null
-│       ├── linkedinUrl: string | null
-│       ├── notes: string
-│       ├── tags: string[]
-│       ├── relationshipStrength: number # 0-100, calculated from interactions
-│       ├── lastInteraction: Timestamp | null
-│       ├── createdAt: Timestamp
-│       ├── updatedAt: Timestamp
-│       └── interactions/              # Subcollection
-│           └── {interactionId}/
-│               ├── type: 'email_sent' | 'email_received' | 'call' | 'meeting' | 'linkedin_message'
-│               ├── date: Timestamp
-│               ├── notes: string
-│               └── outcome: string | null
-├── notifications/                     # Top-level collection
-│   └── {notificationId}/
-│       ├── userId: string             # Indexed
-│       ├── type: 'follow_up' | 'milestone' | 'insight'
-│       ├── title: string
-│       ├── message: string
-│       ├── read: boolean
-│       ├── actionUrl: string | null
-│       ├── createdAt: Timestamp
-│       └── expiresAt: Timestamp | null
-├── milestones/                        # Top-level collection
-│   └── {milestoneId}/
-│       ├── userId: string             # Indexed
-│       ├── type: 'first_application' | 'first_response' | 'first_interview' | '10_applications' | 'first_offer'
-│       ├── achievedAt: Timestamp
-│       └── metadata: Record<string, any>
-├── aiUsage/                           # Top-level collection
-│   └── {usageId}/
-│       ├── userId: string             # Indexed
-│       ├── operation: 'resume_parse' | 'job_match' | 'summarize_notes' | 'follow_up_suggest'
-│       ├── tokensUsed: number
-│       ├── cost: number               # USD
-│       ├── success: boolean
-│       ├── timestamp: Timestamp
-│       └── metadata: {
-│             cachedPrompt: boolean
-│             modelVersion: string
-│           }
-└── insights/                          # Top-level collection (Cloud Functions generated)
-    └── {insightId}/
-        ├── userId: string             # Indexed
-        ├── weekOf: Timestamp
-        ├── metrics: {
-        │     applicationsSubmitted: number
-        │     responsesReceived: number
-        │     interviewsScheduled: number
-        │     averageMatchScore: number
-        │   }
-        ├── burnoutSignals: string[]   # e.g., ["high_volume", "low_responses"]
-        ├── suggestions: string[]
-        └── generatedAt: Timestamp
-```
 
-### Composite Indexes (firestore.indexes.json)
+### Database Indexes
 
-```json
-{
-  "indexes": [
-    {
-      "collectionGroup": "applications",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "applicationDate", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "applications",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "contacts",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "lastInteraction", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "notifications",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "read", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    }
-  ]
-}
+```sql
+-- Applications table indexes
+CREATE INDEX idx_applications_user_id ON public.applications(user_id);
+CREATE INDEX idx_applications_user_status_date ON public.applications(user_id, status, application_date DESC);
+CREATE INDEX idx_applications_user_created ON public.applications(user_id, created_at DESC);
+CREATE INDEX idx_applications_deleted ON public.applications(deleted_at) WHERE deleted_at IS NULL;
+
+-- Application notes indexes
+CREATE INDEX idx_application_notes_app_id ON public.application_notes(application_id);
+CREATE INDEX idx_application_notes_created ON public.application_notes(application_id, created_at DESC);
+
+-- Application documents indexes
+CREATE INDEX idx_application_docs_app_id ON public.application_documents(application_id);
+
+-- Contacts table indexes
+CREATE INDEX idx_contacts_user_id ON public.contacts(user_id);
+CREATE INDEX idx_contacts_user_interaction ON public.contacts(user_id, last_interaction DESC);
+
+-- Contact interactions indexes
+CREATE INDEX idx_contact_interactions_contact_id ON public.contact_interactions(contact_id);
+CREATE INDEX idx_contact_interactions_date ON public.contact_interactions(contact_id, date DESC);
+
+-- Notifications table indexes
+CREATE INDEX idx_notifications_user_id ON public.notifications(user_id);
+CREATE INDEX idx_notifications_user_read_created ON public.notifications(user_id, read, created_at DESC);
+
+-- AI usage indexes
+CREATE INDEX idx_ai_usage_user_id ON public.ai_usage(user_id);
+CREATE INDEX idx_ai_usage_timestamp ON public.ai_usage(user_id, timestamp DESC);
+
+-- Insights indexes
+CREATE INDEX idx_insights_user_week ON public.insights(user_id, week_of DESC);
 ```
 
 ---
 
 ## API Routes Overview
 
-### Authentication Routes (Firebase Auth SDK)
-- `POST /api/auth/login` - OAuth login (handled by Firebase)
+### Authentication Routes (Supabase Auth SDK)
+- `POST /api/auth/login` - OAuth login (handled by Supabase)
 - `POST /api/auth/logout` - Sign out
+- `POST /api/auth/callback` - OAuth callback handler
 
 ### Application Routes
 - `GET /api/applications` - List user's applications (paginated, filtered)
@@ -587,7 +586,7 @@ RootLayout (auth provider, toast provider)
 ### Claude API Integration Architecture
 
 ```
-User Action → Server Action → AI Service → Claude API → Parse Response → Firestore
+User Action → Server Action → AI Service → Claude API → Parse Response → Supabase PostgreSQL
 ```
 
 ### 1. Resume Parsing Flow
@@ -689,7 +688,7 @@ export async function matchJobToProfile(
 ```typescript
 // src/lib/ai/rate-limiter.ts
 
-import { Redis } from '@upstash/redis'; // Optional: use Firestore instead
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export async function checkRateLimit(
   userId: string,
@@ -702,12 +701,20 @@ export async function checkRateLimit(
   };
 
   const limit = limits[operation];
-  const key = `ratelimit:${userId}:${operation}`;
+  const windowStart = new Date(Date.now() - limit.window * 1000);
 
-  // Use Firestore transaction for rate limiting
-  const count = await incrementUsageCount(userId, operation);
+  // Count recent usage
+  const supabase = createServerSupabaseClient();
+  const { count, error } = await supabase
+    .from('ai_usage')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('operation', operation)
+    .gte('timestamp', windowStart.toISOString());
 
-  return count <= limit.max;
+  if (error) throw error;
+
+  return (count || 0) < limit.max;
 }
 ```
 
@@ -732,169 +739,327 @@ export function redactPII(text: string): string {
 
 ### 1. Authentication & Authorization
 
-**Firebase Auth Configuration:**
-```javascript
-// src/lib/firebase/auth.ts
+**Supabase Auth Configuration:**
+```typescript
+// src/lib/supabase/client.ts
 
-import { getAuth } from 'firebase/auth';
-import { GoogleAuthProvider, OAuthProvider } from 'firebase/auth';
+import { createBrowserClient } from '@supabase/ssr';
 
-export const googleProvider = new GoogleAuthProvider();
-export const linkedinProvider = new OAuthProvider('linkedin.com');
-export const microsoftProvider = new OAuthProvider('microsoft.com');
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
+```
+
+**Server-side Auth:**
+```typescript
+// src/lib/supabase/server.ts
+
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+
+export function createServerSupabaseClient() {
+  const cookieStore = cookies();
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+      },
+    }
+  );
+}
 ```
 
 **Middleware Protection:**
 ```typescript
 // src/middleware.ts
 
+import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyIdToken } from '@/lib/firebase/admin';
 
 export async function middleware(request: NextRequest) {
-  const token = request.cookies.get('session')?.value;
+  const response = NextResponse.next();
 
-  if (!token) {
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          response.cookies.set(name, value, options);
+        },
+        remove(name: string, options: any) {
+          response.cookies.delete(name);
+        },
+      },
+    }
+  );
+
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  try {
-    const decodedToken = await verifyIdToken(token);
-
-    // Add userId to request headers for server actions
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-user-id', decodedToken.uid);
-
-    return NextResponse.next({
-      request: { headers: requestHeaders }
-    });
-  } catch (error) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
+  return response;
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/api/applications/:path*']
+  matcher: ['/dashboard/:path*']
 };
 ```
 
 ---
 
-### 2. Firestore Security Rules
+### 2. PostgreSQL Row Level Security (RLS) Policies
 
-```javascript
-// firestore/firestore.rules
+```sql
+-- Enable RLS on all tables
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.applications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.application_notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.application_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.contacts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.contact_interactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.milestones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_usage ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.insights ENABLE ROW LEVEL SECURITY;
 
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
+-- Users table policies
+CREATE POLICY "Users can view own profile"
+  ON public.users FOR SELECT
+  USING (auth.uid() = id);
 
-    // Helper function: user is authenticated
-    function isAuthenticated() {
-      return request.auth != null;
-    }
+CREATE POLICY "Users can update own profile"
+  ON public.users FOR UPDATE
+  USING (auth.uid() = id);
 
-    // Helper function: user owns the document
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
+-- Profiles table policies
+CREATE POLICY "Users can view own profile"
+  ON public.profiles FOR SELECT
+  USING (auth.uid() = user_id);
 
-    // Users collection
-    match /users/{userId} {
-      allow read: if isAuthenticated() && isOwner(userId);
-      allow create: if isAuthenticated() && isOwner(userId);
-      allow update: if isAuthenticated() && isOwner(userId);
+CREATE POLICY "Users can insert own profile"
+  ON public.profiles FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
 
-      match /profile/{profileId} {
-        allow read, write: if isAuthenticated() && isOwner(userId);
-      }
+CREATE POLICY "Users can update own profile"
+  ON public.profiles FOR UPDATE
+  USING (auth.uid() = user_id);
 
-      match /settings/{settingId} {
-        allow read, write: if isAuthenticated() && isOwner(userId);
-      }
-    }
+-- User settings policies
+CREATE POLICY "Users can manage own settings"
+  ON public.user_settings FOR ALL
+  USING (auth.uid() = user_id);
 
-    // Applications collection
-    match /applications/{applicationId} {
-      allow read: if isAuthenticated() && isOwner(resource.data.userId);
-      allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
-      allow update, delete: if isAuthenticated() && isOwner(resource.data.userId);
+-- Applications table policies
+CREATE POLICY "Users can view own applications"
+  ON public.applications FOR SELECT
+  USING (auth.uid() = user_id AND deleted_at IS NULL);
 
-      match /notes/{noteId} {
-        allow read, write: if isAuthenticated() && isOwner(get(/databases/$(database)/documents/applications/$(applicationId)).data.userId);
-      }
+CREATE POLICY "Users can insert own applications"
+  ON public.applications FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
 
-      match /documents/{documentId} {
-        allow read, write: if isAuthenticated() && isOwner(get(/databases/$(database)/documents/applications/$(applicationId)).data.userId);
-      }
-    }
+CREATE POLICY "Users can update own applications"
+  ON public.applications FOR UPDATE
+  USING (auth.uid() = user_id);
 
-    // Contacts collection
-    match /contacts/{contactId} {
-      allow read: if isAuthenticated() && isOwner(resource.data.userId);
-      allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
-      allow update, delete: if isAuthenticated() && isOwner(resource.data.userId);
+CREATE POLICY "Users can delete own applications"
+  ON public.applications FOR DELETE
+  USING (auth.uid() = user_id);
 
-      match /interactions/{interactionId} {
-        allow read, write: if isAuthenticated() && isOwner(get(/databases/$(database)/documents/contacts/$(contactId)).data.userId);
-      }
-    }
+-- Application notes policies
+CREATE POLICY "Users can view notes for own applications"
+  ON public.application_notes FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.applications
+      WHERE applications.id = application_notes.application_id
+      AND applications.user_id = auth.uid()
+    )
+  );
 
-    // Notifications collection
-    match /notifications/{notificationId} {
-      allow read: if isAuthenticated() && isOwner(resource.data.userId);
-      allow write: if false; // Only Cloud Functions can write
-    }
+CREATE POLICY "Users can manage notes for own applications"
+  ON public.application_notes FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.applications
+      WHERE applications.id = application_notes.application_id
+      AND applications.user_id = auth.uid()
+    )
+  );
 
-    // AI Usage collection (read-only for users)
-    match /aiUsage/{usageId} {
-      allow read: if isAuthenticated() && isOwner(resource.data.userId);
-      allow write: if false; // Only server can write
-    }
-  }
-}
+-- Application documents policies
+CREATE POLICY "Users can view documents for own applications"
+  ON public.application_documents FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.applications
+      WHERE applications.id = application_documents.application_id
+      AND applications.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can manage documents for own applications"
+  ON public.application_documents FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.applications
+      WHERE applications.id = application_documents.application_id
+      AND applications.user_id = auth.uid()
+    )
+  );
+
+-- Contacts table policies
+CREATE POLICY "Users can view own contacts"
+  ON public.contacts FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own contacts"
+  ON public.contacts FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own contacts"
+  ON public.contacts FOR UPDATE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own contacts"
+  ON public.contacts FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- Contact interactions policies
+CREATE POLICY "Users can view interactions for own contacts"
+  ON public.contact_interactions FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.contacts
+      WHERE contacts.id = contact_interactions.contact_id
+      AND contacts.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can manage interactions for own contacts"
+  ON public.contact_interactions FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.contacts
+      WHERE contacts.id = contact_interactions.contact_id
+      AND contacts.user_id = auth.uid()
+    )
+  );
+
+-- Notifications policies (read-only for users, write via service role)
+CREATE POLICY "Users can view own notifications"
+  ON public.notifications FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own notifications"
+  ON public.notifications FOR UPDATE
+  USING (auth.uid() = user_id);
+
+-- Milestones policies (read-only for users)
+CREATE POLICY "Users can view own milestones"
+  ON public.milestones FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- AI usage policies (read-only for users)
+CREATE POLICY "Users can view own AI usage"
+  ON public.ai_usage FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Insights policies (read-only for users)
+CREATE POLICY "Users can view own insights"
+  ON public.insights FOR SELECT
+  USING (auth.uid() = user_id);
 ```
 
 ---
 
-### 3. Firebase Storage Security Rules
+### 3. Supabase Storage Security Policies
 
-```javascript
-// storage/storage.rules
+```sql
+-- Create storage buckets
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('resumes', 'resumes', false);
 
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('documents', 'documents', false);
 
-    // Helper function: file size limit
-    function isValidSize(maxSize) {
-      return request.resource.size <= maxSize;
-    }
+-- Resumes bucket policies
+CREATE POLICY "Users can upload own resumes"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'resumes'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+    AND (storage.extension(name) = 'pdf' OR storage.extension(name) = 'docx')
+  );
 
-    // Helper function: file type validation
-    function isValidFileType(allowedTypes) {
-      return request.resource.contentType in allowedTypes;
-    }
+CREATE POLICY "Users can view own resumes"
+  ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'resumes'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
 
-    // User resumes
-    match /users/{userId}/resumes/{fileName} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if request.auth != null
-                   && request.auth.uid == userId
-                   && isValidSize(5 * 1024 * 1024) // 5MB
-                   && isValidFileType(['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']);
-    }
+CREATE POLICY "Users can update own resumes"
+  ON storage.objects FOR UPDATE
+  USING (
+    bucket_id = 'resumes'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
 
-    // Application documents
-    match /users/{userId}/applications/{applicationId}/documents/{fileName} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if request.auth != null
-                   && request.auth.uid == userId
-                   && isValidSize(10 * 1024 * 1024) // 10MB
-                   && isValidFileType(['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'image/jpeg', 'image/png']);
-    }
-  }
-}
+CREATE POLICY "Users can delete own resumes"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'resumes'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+-- Documents bucket policies
+CREATE POLICY "Users can upload own documents"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'documents'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+    AND (
+      storage.extension(name) IN ('pdf', 'docx', 'txt', 'jpg', 'jpeg', 'png')
+    )
+  );
+
+CREATE POLICY "Users can view own documents"
+  ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'documents'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+CREATE POLICY "Users can update own documents"
+  ON storage.objects FOR UPDATE
+  USING (
+    bucket_id = 'documents'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+CREATE POLICY "Users can delete own documents"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'documents'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
 ```
 
 ---
@@ -930,23 +1095,33 @@ export const updateApplicationSchema = createApplicationSchema.partial();
 ```typescript
 // src/actions/applications.ts
 
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
 export async function createApplication(data: unknown) {
   // 1. Validate input
   const validatedData = createApplicationSchema.parse(data);
 
-  // 2. Verify authentication
-  const userId = await getCurrentUserId();
-  if (!userId) throw new Error('Unauthorized');
+  // 2. Get authenticated user
+  const supabase = createServerSupabaseClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-  // 3. Write to Firestore
-  const docRef = await addDoc(collection(db, 'applications'), {
-    ...validatedData,
-    userId,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  });
+  if (authError || !user) {
+    throw new Error('Unauthorized');
+  }
 
-  return { id: docRef.id };
+  // 3. Insert into PostgreSQL
+  const { data: application, error } = await supabase
+    .from('applications')
+    .insert({
+      ...validatedData,
+      user_id: user.id,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return { id: application.id };
 }
 ```
 
@@ -954,43 +1129,22 @@ export async function createApplication(data: unknown) {
 
 ## Deployment Strategy
 
-### Firebase App Hosting Configuration
+### Vercel Configuration
 
 ```json
-// firebase.json
+// vercel.json (optional)
 
 {
-  "firestore": {
-    "rules": "firestore/firestore.rules",
-    "indexes": "firestore/firestore.indexes.json"
-  },
-  "storage": {
-    "rules": "storage/storage.rules"
-  },
-  "hosting": {
-    "public": ".next",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "rewrites": [
-      {
-        "source": "**",
-        "function": "nextjsFunc"
-      }
-    ],
-    "headers": [
-      {
-        "source": "**/*.@(jpg|jpeg|gif|png|svg|webp|js|css)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=31536000, immutable"
-          }
-        ]
-      }
-    ]
-  },
-  "functions": {
-    "source": "functions",
-    "runtime": "nodejs20"
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "@supabase-url",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@supabase-anon-key",
+    "SUPABASE_SERVICE_ROLE_KEY": "@supabase-service-role-key",
+    "ANTHROPIC_API_KEY": "@anthropic-api-key"
   }
 }
 ```
@@ -1000,7 +1154,7 @@ export async function createApplication(data: unknown) {
 ```yaml
 # .github/workflows/deploy.yml
 
-name: Deploy to Firebase
+name: Deploy to Vercel
 
 on:
   push:
@@ -1043,20 +1197,20 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-
-      - name: Deploy to Firebase
-        uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
-          projectId: your-project-id
-          channelId: live
+          node-version: '20'
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
 ```
 
 ### Environment Configuration
@@ -1064,21 +1218,13 @@ jobs:
 ```bash
 # .env.example
 
-# Firebase Client SDK
-NEXT_PUBLIC_FIREBASE_API_KEY=
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
-NEXT_PUBLIC_FIREBASE_APP_ID=
-
-# Firebase Admin SDK (server-side only)
-FIREBASE_ADMIN_PROJECT_ID=
-FIREBASE_ADMIN_CLIENT_EMAIL=
-FIREBASE_ADMIN_PRIVATE_KEY=
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 # Anthropic API
-ANTHROPIC_API_KEY=
+ANTHROPIC_API_KEY=sk-ant-xxx
 
 # Environment
 NODE_ENV=development
@@ -1099,9 +1245,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - Prefetch on link hover
 
 ### 3. Caching
-- Firestore query results cached for 1 hour (stale-while-revalidate)
+- Supabase query results cached for 1 hour (stale-while-revalidate)
 - AI prompt caching (5-minute TTL)
-- Static assets with 1-year cache
+- Static assets with 1-year cache via Vercel CDN
 
 ### 4. Bundle Size
 - Tree-shake unused shadcn components
@@ -1109,9 +1255,10 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - Target: <100KB initial JavaScript bundle
 
 ### 5. Monitoring
-- Firebase Performance Monitoring
+- Vercel Analytics for performance tracking
 - Core Web Vitals tracking
-- Firestore query performance analysis
+- Supabase query performance analysis via dashboard
+- Error tracking with Sentry or Vercel Error Monitoring
 
 ---
 
@@ -1122,10 +1269,10 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - Zod schemas validation
 - AI prompt parsing logic
 
-### Integration Tests (Vitest + Firestore Emulator)
-- API routes with mocked Firestore
+### Integration Tests (Vitest + Supabase Local)
+- API routes with Supabase local instance
 - Server Actions with authentication
-- Firestore security rules
+- PostgreSQL RLS policies verification
 
 ### E2E Tests (Playwright)
 - Critical user flows:
@@ -1165,8 +1312,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ## Future Architecture Enhancements
 
 ### 1. Real-Time Collaboration (Recruiter Features)
-- Firestore real-time listeners for team updates
-- Presence detection with Firestore
+- Supabase real-time subscriptions for team updates
+- Presence detection with Supabase Presence
 - Comment threads with conflict resolution
 
 ### 2. Offline Support
@@ -1180,12 +1327,12 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 ### 4. Mobile App
 - React Native with shared business logic
-- Firebase SDKs for mobile
-- Push notifications via FCM
+- Supabase client for mobile
+- Push notifications via Supabase Edge Functions
 
 ### 5. Analytics & Machine Learning
-- BigQuery export for advanced analytics
-- User behavior tracking with Firebase Analytics
+- Analytics integration with PostHog or Mixpanel
+- User behavior tracking with Vercel Analytics
 - Predictive modeling (application success prediction)
 
 ---

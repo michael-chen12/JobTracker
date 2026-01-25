@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
@@ -76,7 +77,7 @@ export function ApplicationFormDialog({
       status: 'applied',
       applied_date: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD
       priority: 'medium',
-      job_type: undefined,
+      job_type: undefined, // Will be converted to empty string in Select value prop
       location: '',
       job_url: '',
       job_description: '',
@@ -96,9 +97,27 @@ export function ApplicationFormDialog({
     setIsSubmitting(true);
 
     try {
+      // Clean data: convert empty strings to undefined for optional fields
+      const cleanedData = {
+        ...data,
+        applied_date: data.applied_date || undefined,
+        deadline: data.deadline || undefined,
+        location: data.location || undefined,
+        job_url: data.job_url || undefined,
+        job_description: data.job_description || undefined,
+        source: data.source || undefined,
+        referral_name: data.referral_name || undefined,
+        job_type: data.job_type || undefined,
+        // Only include salary_range if at least one value is present
+        salary_range:
+          data.salary_range?.min || data.salary_range?.max
+            ? data.salary_range
+            : undefined,
+      };
+
       // Call server action to create application
       console.log('Calling createApplication server action...');
-      const result = await createApplication(data);
+      const result = await createApplication(cleanedData);
       console.log('Server action result:', result);
 
       if (result.error) {
@@ -123,8 +142,10 @@ export function ApplicationFormDialog({
         // Close dialog
         onOpenChange(false);
 
-        // Call success callback (for optimistic updates)
-        onSuccess?.();
+        // Call success callback after a delay to avoid updating during render
+        setTimeout(() => {
+          onSuccess?.();
+        }, 0);
       }
     } catch (error) {
       console.log('Caught exception:', error);
@@ -157,6 +178,9 @@ export function ApplicationFormDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Application</DialogTitle>
+          <DialogDescription>
+            Add a new job application to track your job search progress.
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -318,7 +342,10 @@ export function ApplicationFormDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Job Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || ''}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select type" />

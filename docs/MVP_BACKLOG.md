@@ -9,7 +9,7 @@
 Implement a minimal end-to-end flow proving the entire stack works together: user authentication, create one application, display on dashboard, add a simple note.
 
 **Acceptance Criteria:**
-- [ ] User can sign in with Google OAuth via Firebase Auth
+- [ ] User can sign in with Google OAuth via Supabase Auth
 - [ ] Authenticated user lands on `/dashboard` with empty state
 - [ ] User can create a job application with: company name, position, status (Applied)
 - [ ] Application appears on dashboard in a simple card/list view
@@ -19,9 +19,9 @@ Implement a minimal end-to-end flow proving the entire stack works together: use
 - [ ] E2E test covers: sign-in → create app → add note → sign-out
 
 **Technical Notes:**
-- Set up Firebase project with Auth and Firestore
+- Set up Supabase project with Auth and PostgreSQL
 - Configure Next.js App Router with auth middleware
-- Create Firestore collections: `users`, `applications`, `notes`
+- Create PostgreSQL tables: `users`, `applications`, `application_notes`
 - Implement simple dashboard page with server-side auth check
 
 ---
@@ -48,43 +48,46 @@ Initialize project with all required tooling, linting, testing frameworks, and C
 
 ---
 
-### Ticket #3: Firebase Integration - Auth, Firestore, Storage
+### Ticket #3: Supabase Integration - Auth, PostgreSQL, Storage
 **Priority:** P0 | **Complexity:** M | **Dependencies:** #2
 
 **Description:**
-Configure Firebase project, set up multi-provider authentication, initialize Firestore database, and configure Firebase Storage for document uploads.
+Configure Supabase project, set up multi-provider authentication, initialize PostgreSQL database with RLS policies, and configure Supabase Storage for document uploads.
 
 **Acceptance Criteria:**
-- [ ] Firebase project created with production and staging environments
-- [ ] Firebase Auth configured with Google OAuth provider
-- [ ] Firestore security rules defined for `users`, `applications`, `notes`
-- [ ] Firebase Storage bucket created with access rules
-- [ ] Firebase Admin SDK initialized for server-side operations
+- [ ] Supabase project created with production and staging environments
+- [ ] Supabase Auth configured with Google OAuth provider
+- [ ] PostgreSQL tables created: `users`, `applications`, `application_notes`
+- [ ] RLS policies defined for all tables
+- [ ] Supabase Storage buckets created with security policies
+- [ ] Supabase client initialized for client and server-side operations
 - [ ] Auth context provider for client-side session management
 - [ ] Middleware protects authenticated routes (`/dashboard/*`)
 - [ ] Unit tests for auth utilities
 
 **Technical Notes:**
-- Store Firebase config in environment variables
-- Use Firebase Admin SDK for server actions
+- Store Supabase config in environment variables
+- Use Supabase server client for server actions
 - Implement auth state listener in root layout
+- Run migrations via Supabase CLI
 
 ---
 
 ## Epic 2: Application Management Core
 
-### Ticket #4: Application Data Model & Firestore Schema
+### Ticket #4: Application Data Model & PostgreSQL Schema
 **Priority:** P0 | **Complexity:** S | **Dependencies:** #3
 
 **Description:**
-Define comprehensive Firestore data model for applications with proper indexing, validation schemas using Zod, and TypeScript interfaces.
+Define comprehensive PostgreSQL schema for applications with proper indexing, validation schemas using Zod, and TypeScript interfaces.
 
 **Acceptance Criteria:**
-- [ ] Firestore collections designed: `applications`, `notes`, `contacts`, `documents`
-- [ ] Composite indexes created for common queries (userId + status, userId + createdAt)
+- [ ] PostgreSQL tables designed: `applications`, `application_notes`, `contacts`, `application_documents`
+- [ ] Database indexes created for common queries (user_id + status, user_id + created_at)
 - [ ] Zod schemas for application creation/update validation
 - [ ] TypeScript interfaces exported from `@/types/application.ts`
-- [ ] Security rules enforce user-level data isolation
+- [ ] RLS policies enforce user-level data isolation
+- [ ] Migration files created in `supabase/migrations/`
 - [ ] Documentation in `ARCHITECTURE.md` updated
 
 **Data Model:**
@@ -130,8 +133,9 @@ Implement server actions for creating, reading, updating, and deleting applicati
 
 **Technical Notes:**
 - Use Next.js Server Actions for mutations
-- Implement soft delete with `deletedAt` timestamp
+- Implement soft delete with `deleted_at` timestamp
 - Return paginated results (20 items default)
+- Use Supabase client for database operations
 
 ---
 
@@ -157,6 +161,7 @@ Build dashboard page with table view of applications using TanStack Table, inclu
 - Use TanStack Table for data grid
 - Implement optimistic updates for status changes
 - Prefetch next page for smooth navigation
+- Use Supabase real-time subscriptions for live updates
 
 ---
 
@@ -235,6 +240,7 @@ Implement drag-and-drop kanban board as alternative view to table, with columns 
 - Use dnd-kit library for drag-and-drop
 - Store view preference in localStorage
 - Limit cards per column to 50 for performance
+- Update status via Supabase server action with optimistic UI
 
 ---
 
@@ -268,24 +274,24 @@ Configure Anthropic Claude API client with prompt caching, rate limiting, and er
 **Priority:** P1 | **Complexity:** M | **Dependencies:** #3
 
 **Description:**
-Implement secure file upload for resumes (PDF/DOCX) with validation, virus scanning, and Firebase Storage integration.
+Implement secure file upload for resumes (PDF/DOCX) with validation and Supabase Storage integration.
 
 **Acceptance Criteria:**
 - [ ] File upload component with drag-and-drop
 - [ ] Accept only PDF and DOCX formats (max 5MB)
 - [ ] Client-side file type and size validation
-- [ ] Upload to Firebase Storage at `users/{userId}/resumes/{filename}`
+- [ ] Upload to Supabase Storage bucket `resumes` at `{userId}/{filename}`
 - [ ] Generate signed download URLs (1-hour expiration)
 - [ ] Display upload progress bar
-- [ ] Store resume metadata in Firestore (`resumes` collection)
+- [ ] Store resume metadata in PostgreSQL `profiles` table
 - [ ] User can upload multiple resume versions
 - [ ] Delete resume option with Storage cleanup
 - [ ] E2E test: upload PDF, verify storage, delete
 
 **Technical Notes:**
-- Use Firebase Storage SDK
+- Use Supabase Storage SDK
 - Implement chunked upload for large files
-- Set CORS rules for Firebase Storage bucket
+- Configure storage bucket policies for secure access
 
 ---
 
@@ -299,12 +305,13 @@ Parse uploaded resumes using Claude API to extract structured data (skills, expe
 - [ ] Trigger parsing automatically after resume upload
 - [ ] Extract: skills (array), work experience (array of objects), education (array)
 - [ ] Extract: contact info (email, phone, LinkedIn), summary/objective
-- [ ] Store parsed data in `users/{userId}/profile` document
+- [ ] Store parsed data in `profiles` table (JSONB columns for experience/education)
 - [ ] Show parsing progress indicator
 - [ ] Display extracted data in profile page with edit capability
 - [ ] Handle parsing failures gracefully (retry option)
 - [ ] PII redaction before logging (no emails/phones in logs)
 - [ ] Cost optimization: cache system prompt, use prompt caching
+- [ ] Track usage in `ai_usage` table
 - [ ] Unit tests with sample resume fixtures
 - [ ] E2E test: upload resume → verify parsed data appears
 
@@ -320,6 +327,7 @@ User: [Resume text from PDF extraction]
 - Use `pdf-parse` for PDF text extraction
 - Use `mammoth` for DOCX extraction
 - Implement prompt caching with resume format examples
+- Store AI usage metrics in PostgreSQL for cost tracking
 
 ---
 
@@ -408,9 +416,10 @@ Generate context-aware follow-up suggestions based on application status, timeli
 - Interview + 1 day → "Ask about timeline for next steps"
 
 **Technical Notes:**
-- Use Cloud Functions scheduled trigger (daily check)
+- Use Supabase Edge Functions with cron trigger (daily check)
 - Generate suggestions in batch to reduce API calls
 - Allow user customization of suggestion frequency
+- Store suggestions in PostgreSQL with timestamps
 
 ---
 
@@ -423,9 +432,9 @@ Generate context-aware follow-up suggestions based on application status, timeli
 Implement contact management system for tracking recruiters, referrals, and professional connections.
 
 **Acceptance Criteria:**
-- [ ] Firestore `contacts` collection with schema: name, email, phone, company, title, LinkedIn, notes, tags
+- [ ] PostgreSQL `contacts` table with columns: name, email, phone, company, title, LinkedIn, notes, tags
 - [ ] CRUD API routes: create, read, update, delete contacts
-- [ ] Link contacts to applications (many-to-many relationship)
+- [ ] Link contacts to applications via foreign key `referral_contact_id`
 - [ ] Contact list page at `/dashboard/contacts`
 - [ ] Search contacts by name, company, or tag
 - [ ] Sort by: name, company, last interaction date
@@ -434,8 +443,9 @@ Implement contact management system for tracking recruiters, referrals, and prof
 - [ ] E2E test: create contact → link to application
 
 **Technical Notes:**
-- Store contact-application links in `applicationContacts` subcollection
-- Implement soft delete for contacts
+- Use foreign key relationship for contact-application links
+- Implement soft delete for contacts (optional)
+- Create indexes for search performance
 
 ---
 
@@ -446,7 +456,7 @@ Implement contact management system for tracking recruiters, referrals, and prof
 Track all interactions with contacts (emails, calls, meetings) with timeline view and relationship scoring.
 
 **Acceptance Criteria:**
-- [ ] `interactions` subcollection under contacts
+- [ ] `contact_interactions` table with foreign key to contacts
 - [ ] Log interaction: type (email/call/meeting), date, notes, outcome
 - [ ] Timeline view on contact detail page
 - [ ] Quick-add interaction button (pre-fills date to today)
@@ -463,8 +473,9 @@ Track all interactions with contacts (emails, calls, meetings) with timeline vie
 - Networking event
 
 **Technical Notes:**
-- Use `createdAt` for chronological sorting
+- Use `created_at` for chronological sorting
 - Relationship strength: interactions in last 30 days weighted
+- Update `last_interaction` on contacts table via trigger
 
 ---
 
@@ -537,9 +548,9 @@ Highlight positive milestones and achievements to boost morale during job search
 - "Response Received!" (any positive response)
 
 **Technical Notes:**
-- Store milestones in `userMilestones` collection
-- Use Firestore triggers to detect milestones
-- Email via Firebase Extensions (Mailgun/SendGrid)
+- Store milestones in `milestones` table
+- Use PostgreSQL triggers or Edge Functions to detect milestones
+- Email via third-party service (Resend/SendGrid) through Edge Functions
 
 ---
 
@@ -564,8 +575,8 @@ Analyze user activity patterns to identify potential burnout and suggest healthy
 - Rejection rate >80% in last 10 applications
 
 **Technical Notes:**
-- Calculate insights using Cloud Functions (weekly schedule)
-- Store insights in `userInsights` collection
+- Calculate insights using Supabase Edge Functions (weekly cron schedule)
+- Store insights in `insights` table
 
 ---
 
@@ -588,7 +599,7 @@ Enable bulk actions on multiple applications from table view (status change, tag
 - [ ] E2E test: select 3 apps → change status → verify
 
 **Technical Notes:**
-- Use Firestore batch writes (max 500 operations)
+- Use Supabase batch updates (PostgreSQL transactions)
 - Implement chunking for >50 items
 
 ---
@@ -610,8 +621,8 @@ Implement advanced filtering with multiple criteria, saved filters, and full-tex
 - [ ] E2E test: apply filters → verify results → save preset
 
 **Technical Notes:**
-- Use Firestore composite queries (limit 10 filters)
-- Implement client-side filtering for text search (Firestore has no full-text search)
+- Use PostgreSQL queries with proper indexing
+- Implement full-text search using PostgreSQL's tsvector (or pg_search)
 - Consider Algolia for advanced search (post-MVP)
 
 ---
@@ -633,8 +644,8 @@ Allow users to attach multiple documents to applications (cover letters, portfol
 - [ ] E2E test: upload 3 files → verify list → delete one
 
 **Technical Notes:**
-- Store in Firebase Storage: `users/{userId}/applications/{appId}/documents/`
-- Store metadata in `documents` subcollection
+- Store in Supabase Storage bucket `documents`: `{userId}/applications/{appId}/{filename}`
+- Store metadata in `application_documents` table
 
 ---
 
@@ -673,7 +684,7 @@ Enable users to export all their data and request account deletion in compliance
 - [ ] Generate CSV export for applications (compatible with Excel)
 - [ ] Download link expires after 1 hour
 - [ ] "Delete Account" option with confirmation
-- [ ] Account deletion removes all Firestore data and Storage files
+- [ ] Account deletion removes all PostgreSQL data and Storage files
 - [ ] 30-day grace period before permanent deletion
 - [ ] Email confirmation after export and deletion requests
 - [ ] E2E test: request export → download JSON → verify contents
@@ -683,8 +694,9 @@ Enable users to export all their data and request account deletion in compliance
 - CSV: flattened applications table
 
 **Technical Notes:**
-- Use Cloud Functions to generate exports (async)
-- Store export files temporarily in Firebase Storage
+- Use Supabase Edge Functions to generate exports (async)
+- Store export files temporarily in Supabase Storage
+- Use PostgreSQL CASCADE delete for related records
 
 ---
 
@@ -695,8 +707,8 @@ Enable users to export all their data and request account deletion in compliance
 Add LinkedIn and Microsoft as additional OAuth providers for authentication.
 
 **Acceptance Criteria:**
-- [ ] LinkedIn OAuth configured in Firebase
-- [ ] Microsoft OAuth configured in Firebase
+- [ ] LinkedIn OAuth configured in Supabase
+- [ ] Microsoft OAuth configured in Supabase
 - [ ] Login page shows all three options: Google, LinkedIn, Microsoft
 - [ ] Account linking: user can add additional providers to existing account
 - [ ] Settings page shows connected providers with unlink option
@@ -704,8 +716,9 @@ Add LinkedIn and Microsoft as additional OAuth providers for authentication.
 - [ ] E2E test: sign up with LinkedIn → link Microsoft → unlink LinkedIn
 
 **Technical Notes:**
-- Use Firebase Auth's built-in multi-provider linking
+- Use Supabase Auth's built-in multi-provider support
 - Handle email conflicts (same email, different provider)
+- Configure OAuth apps in respective provider dashboards
 
 ---
 
@@ -749,9 +762,9 @@ Implement in-app and email notifications for follow-up reminders, milestone achi
 - [ ] E2E test: trigger follow-up → verify in-app notification → verify email sent
 
 **Technical Notes:**
-- Use Firebase Cloud Messaging for push notifications
-- Use Firebase Extensions for email (SendGrid/Mailgun)
-- Store notifications in `notifications` collection
+- Use Supabase Edge Functions for push notifications
+- Use third-party email service (SendGrid/Resend) via Edge Functions
+- Store notifications in `notifications` table
 
 ---
 
@@ -766,16 +779,17 @@ Optimize application performance, implement monitoring, and set up error trackin
 - [ ] Implement code splitting for heavy pages (kanban, analytics)
 - [ ] Image optimization with Next.js Image component
 - [ ] Prefetch data on link hover
-- [ ] Firebase Analytics integrated
-- [ ] Error tracking with Sentry or Firebase Crashlytics
-- [ ] Performance monitoring: track slow Firestore queries
-- [ ] Set up uptime monitoring (Firebase App Check)
+- [ ] Vercel Analytics integrated
+- [ ] Error tracking with Sentry or Vercel Error Monitoring
+- [ ] Performance monitoring: track slow database queries via Supabase dashboard
+- [ ] Set up uptime monitoring (Vercel or UptimeRobot)
 - [ ] Bundle size analysis: keep initial load <100KB gzipped
 
 **Technical Notes:**
 - Use `next/dynamic` for code splitting
 - Implement service worker for offline support (optional)
 - Monitor Core Web Vitals: LCP, FID, CLS
+- Use Vercel Speed Insights for real-user monitoring
 
 ---
 

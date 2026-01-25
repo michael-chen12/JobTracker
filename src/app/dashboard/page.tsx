@@ -15,14 +15,17 @@ export default async function DashboardPage() {
     redirect('/auth/login');
   }
 
-  // Fetch user's applications
-  const { data: applications, error } = await getApplications();
+  // Fetch user's applications with pagination
+  const result = await getApplications({ page: 1, limit: 20 });
 
   return (
     <DashboardClient
       userName={user.user_metadata?.full_name || user.email || 'User'}
-      applications={applications || []}
-      error={error || null}
+      initialApplications={result.data || []}
+      initialPagination={
+        result.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 }
+      }
+      error={result.error || null}
     />
   );
 }
