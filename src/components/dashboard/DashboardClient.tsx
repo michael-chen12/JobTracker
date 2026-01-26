@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ApplicationFormDialog } from '@/components/applications/ApplicationFormDialog';
 import { ApplicationsTable } from '@/components/applications/ApplicationsTable';
-import { Plus } from 'lucide-react';
+import { KanbanBoard } from '@/components/applications/KanbanBoard';
+import { Plus, LayoutGrid, Table as TableIcon } from 'lucide-react';
 import type { ApplicationRow } from '@/components/applications/columns';
 import { getApplications, type GetApplicationsParams } from '@/actions/applications';
 
@@ -32,7 +33,22 @@ export function DashboardClient({
   const [pagination, setPagination] = useState(initialPagination);
   const [filters, setFilters] = useState<GetApplicationsParams>({});
   const [loading, setLoading] = useState(false);
+  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const router = useRouter();
+
+  // Load view preference from localStorage on mount
+  useEffect(() => {
+    const savedView = localStorage.getItem('applicationViewMode');
+    if (savedView === 'kanban' || savedView === 'table') {
+      setViewMode(savedView);
+    }
+  }, []);
+
+  // Save view preference to localStorage
+  const handleViewChange = (mode: 'table' | 'kanban') => {
+    setViewMode(mode);
+    localStorage.setItem('applicationViewMode', mode);
+  };
 
   const handleSuccess = () => {
     // Refresh the page to show the new application
@@ -137,12 +153,34 @@ export function DashboardClient({
           </div>
         </div>
 
-        {/* Applications Table */}
+        {/* Applications View */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
               Applications
             </h2>
+
+            {/* View Toggle */}
+            <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => handleViewChange('table')}
+                className="h-8"
+              >
+                <TableIcon className="h-4 w-4 mr-1" />
+                Table
+              </Button>
+              <Button
+                variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => handleViewChange('kanban')}
+                className="h-8"
+              >
+                <LayoutGrid className="h-4 w-4 mr-1" />
+                Kanban
+              </Button>
+            </div>
           </div>
 
           {error && (
@@ -161,13 +199,15 @@ export function DashboardClient({
                 Create Your First Application
               </Button>
             </div>
-          ) : (
+          ) : viewMode === 'table' ? (
             <ApplicationsTable
               data={applications}
               pagination={pagination}
               onFilterChange={handleFilterChange}
               loading={loading}
             />
+          ) : (
+            <KanbanBoard applications={applications} />
           )}
         </div>
 

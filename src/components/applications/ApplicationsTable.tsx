@@ -8,6 +8,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Table,
   TableBody,
@@ -43,6 +44,7 @@ export function ApplicationsTable({
   onFilterChange,
   loading = false,
 }: ApplicationsTableProps) {
+  const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const table = useReactTable({
@@ -109,6 +111,7 @@ export function ApplicationsTable({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
+                  onClick={() => router.push(`/dashboard/applications/${row.original.id}`)}
                   className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
                 >
                   {row.getVisibleCells().map((cell) => (
