@@ -15,7 +15,7 @@
 | #7 | Application Creation Form | ✅ Complete |
 | #8 | Application Detail Page | ✅ Complete |
 | #9 | Kanban Board View | ✅ Complete |
-| #10 | Anthropic Claude API Integration | 🟡 In Progress |
+| #10 | Anthropic Claude API Integration | ✅ Complete |
 | #11+ | Not Started | ⚪ Pending |
 
 ---
@@ -273,15 +273,15 @@ Implement drag-and-drop kanban board as alternative view to table, with columns 
 Configure Anthropic Claude API client with prompt caching, rate limiting, and error handling infrastructure.
 
 **Acceptance Criteria:**
-- [ ] Anthropic SDK installed and configured
-- [ ] API key stored securely in environment variables
-- [ ] Wrapper service with retry logic (exponential backoff)
-- [ ] Prompt caching implemented for common system prompts
-- [ ] Rate limiting: 10 resume parses/hour, 50 summaries/hour per user
-- [ ] Error handling for quota exceeded, network failures
-- [ ] Usage tracking in Firestore (`aiUsage` collection)
-- [ ] Unit tests with mocked API responses
-- [ ] Documentation for AI service usage
+- [x] Anthropic SDK installed and configured
+- [x] API key stored securely in environment variables
+- [x] Wrapper service with retry logic (exponential backoff)
+- [x] Prompt caching implemented for common system prompts
+- [x] Rate limiting: 10 resume parses/hour, 50 summaries/hour per user
+- [x] Error handling for quota exceeded, network failures
+- [x] Usage tracking in PostgreSQL (`ai_usage` table)
+- [x] Unit tests with mocked API responses
+- [x] Documentation for AI service usage
 
 **Technical Notes:**
 - Use `@anthropic-ai/sdk` package
