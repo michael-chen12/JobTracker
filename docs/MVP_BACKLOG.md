@@ -276,7 +276,7 @@ Configure Anthropic Claude API client with prompt caching, rate limiting, and er
 - [x] Anthropic SDK installed and configured
 - [x] API key stored securely in environment variables
 - [x] Wrapper service with retry logic (exponential backoff)
-- [x] Prompt caching implemented for common system prompts
+- [ ] Prompt caching implemented for common system prompts (deferred to feature tickets #12-14)
 - [x] Rate limiting: 10 resume parses/hour, 50 summaries/hour per user
 - [x] Error handling for quota exceeded, network failures
 - [x] Usage tracking in PostgreSQL (`ai_usage` table)
