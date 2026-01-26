@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { RateLimitError } from './errors';
+import { RateLimitError } from '@/lib/ai/errors';
 import type { OperationType, RateLimitConfig } from '@/types/ai';
 
 const RATE_LIMITS: RateLimitConfig = {
@@ -38,9 +38,24 @@ export async function checkRateLimit(
   }
 
   if (count !== null && count >= limit) {
-    const resetTime = new Date(Date.now() + 60 * 60 * 1000);
+    // Get the oldest operation timestamp to calculate accurate reset time
+    const { data: oldestOp } = await supabase
+      .from('ai_usage')
+      .select('timestamp')
+      .eq('user_id', userId)
+      .eq('operation_type', operationType)
+      .gte('timestamp', oneHourAgo.toISOString())
+      .order('timestamp', { ascending: true })
+      .limit(1)
+      .single();
+
+    // Reset time is when the oldest operation expires (1 hour after it was created)
+    const resetTime = oldestOp
+      ? new Date(new Date(oldestOp.timestamp).getTime() + 60 * 60 * 1000)
+      : new Date(Date.now() + 60 * 60 * 1000);
+
     throw new RateLimitError(
-      `Rate limit exceeded for ${operationType}. Limit: ${limit} per hour. Try again after ${resetTime.toLocaleTimeString()}.`,
+      `Rate limit exceeded for ${operationType}. Limit: ${limit} per hour. Try again after ${resetTime.toLocaleString()}.`,
       operationType,
       limit,
       resetTime
