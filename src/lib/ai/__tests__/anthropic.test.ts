@@ -82,10 +82,7 @@ describe('AnthropicService', () => {
       output_tokens: 20,
       cache_creation_input_tokens: 0,
       cache_read_input_tokens: 0,
-      cache_creation: { input_tokens: 0 },
-      server_tool_use: { input_tokens: 0, output_tokens: 0 },
-      service_tier: 'default',
-    },
+    } as Anthropic.Message['usage'],
   };
 
   let mockCreate: ReturnType<typeof vi.fn>;
@@ -163,8 +160,8 @@ describe('AnthropicService', () => {
         })
       );
 
-      const logCall = vi.mocked(logUsage).mock.calls[0][0];
-      expect(logCall.latencyMs).toBeGreaterThanOrEqual(100);
+      const logCall = vi.mocked(logUsage).mock.calls[0]?.[0];
+      expect(logCall?.latencyMs).toBeGreaterThanOrEqual(100);
     });
   });
 
@@ -284,7 +281,7 @@ describe('AnthropicService', () => {
         500,
         { error: { type: 'api_error', message: 'Internal server error' } },
         'Internal server error',
-        {}
+        new Headers()
       );
 
       mockCreate
@@ -303,7 +300,7 @@ describe('AnthropicService', () => {
         502,
         { error: { type: 'api_error', message: 'Bad gateway' } },
         'Bad gateway',
-        {}
+        new Headers()
       );
 
       mockCreate
@@ -321,7 +318,7 @@ describe('AnthropicService', () => {
         503,
         { error: { type: 'api_error', message: 'Service unavailable' } },
         'Service unavailable',
-        {}
+        new Headers()
       );
 
       mockCreate
@@ -339,7 +336,7 @@ describe('AnthropicService', () => {
         504,
         { error: { type: 'api_error', message: 'Gateway timeout' } },
         'Gateway timeout',
-        {}
+        new Headers()
       );
 
       mockCreate
@@ -359,7 +356,7 @@ describe('AnthropicService', () => {
         401,
         { error: { type: 'authentication_error', message: 'Invalid API key' } },
         'Invalid API key',
-        {}
+        new Headers()
       );
 
       mockCreate.mockRejectedValue(error401);
@@ -379,7 +376,7 @@ describe('AnthropicService', () => {
         429,
         { error: { type: 'rate_limit_error', message: 'Rate limit exceeded' } },
         'Rate limit exceeded',
-        {}
+        new Headers()
       );
 
       mockCreate.mockRejectedValue(error429);
@@ -399,7 +396,7 @@ describe('AnthropicService', () => {
         400,
         { error: { type: 'invalid_request_error', message: 'Invalid request' } },
         'Invalid request',
-        {}
+        new Headers()
       );
 
       mockCreate.mockRejectedValue(error400);
@@ -421,7 +418,7 @@ describe('AnthropicService', () => {
         401,
         { error: { type: 'authentication_error', message: 'Invalid API key' } },
         'Invalid API key',
-        {}
+        new Headers()
       );
 
       mockCreate.mockRejectedValue(error401);
@@ -443,7 +440,7 @@ describe('AnthropicService', () => {
         429,
         { error: { type: 'rate_limit_error', message: 'Rate limit exceeded' } },
         'Rate limit exceeded',
-        {}
+        new Headers()
       );
 
       mockCreate.mockRejectedValue(error429);
@@ -464,7 +461,7 @@ describe('AnthropicService', () => {
         400,
         { error: { type: 'invalid_request_error', message: 'Invalid params' } },
         'Invalid params',
-        {}
+        new Headers()
       );
 
       mockCreate.mockRejectedValue(error400);
@@ -537,7 +534,7 @@ describe('AnthropicService', () => {
       );
 
       // Verify no tokens were logged on failure
-      const logCall = vi.mocked(logUsage).mock.calls[0][0];
+      const logCall = vi.mocked(logUsage).mock.calls[0]?.[0]!;
       expect(logCall.tokensUsed).toBeUndefined();
       expect(logCall.outputSample).toBeUndefined();
     });
@@ -568,7 +565,7 @@ describe('AnthropicService', () => {
       const service = getAnthropicService();
       await service.createMessage(mockParams, mockUserId, mockOperationType);
 
-      const logCall = vi.mocked(logUsage).mock.calls[0][0];
+      const logCall = vi.mocked(logUsage).mock.calls[0]?.[0]!;
 
       // Verify input sample contains message data
       expect(logCall.inputSample).toBeDefined();
@@ -592,7 +589,7 @@ describe('AnthropicService', () => {
         // Expected to throw
       }
 
-      const logCall = vi.mocked(logUsage).mock.calls[0][0];
+      const logCall = vi.mocked(logUsage).mock.calls[0]?.[0]!;
 
       // Verify input sample is still logged on failure
       expect(logCall.inputSample).toBeDefined();
