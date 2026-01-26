@@ -1,154 +1,209 @@
-# Edmund's Claude Code Setup
+# Job Application Tracker
 
-My personal Claude Code configuration for productive web development. This plugin provides **14 slash commands** and **11 specialized AI agents** to supercharge your development workflow.
+An employer-grade job application tracking system with AI-powered features for resume parsing, notes summarization, and job description analysis.
 
-## Quick Install
+## Features
 
-```bash
-# Step 1: Add the marketplace
-/plugin marketplace add edmund-io/edmunds-claude-code
+- Track job applications with detailed status management
+- Kanban board and table views for application organization
+- AI-powered resume parsing and job analysis
+- Notes management with AI summarization
+- Document attachments and organization
+- Dashboard analytics and insights
 
-# Step 2: Install the plugin
-/plugin install edmunds-claude-code
-```
+## Tech Stack
 
-## What's Inside
+- **Framework:** Next.js 16 (App Router)
+- **Language:** TypeScript 5.3
+- **Database:** Supabase (PostgreSQL)
+- **Authentication:** Supabase Auth (Google OAuth)
+- **AI:** Anthropic Claude API
+- **Styling:** Tailwind CSS + shadcn/ui
+- **Testing:** Vitest (unit) + Playwright (E2E)
 
-### 📋 Development Commands (7)
+## Prerequisites
 
-- `/new-task` - Analyze code for performance issues
-- `/code-explain` - Generate detailed explanations
-- `/code-optimize` - Performance optimization
-- `/code-cleanup` - Refactoring and cleanup
-- `/feature-plan` - Feature implementation planning
-- `/lint` - Linting and fixes
-- `/docs-generate` - Documentation generation
-
-### 🔌 API Commands (3)
-
-- `/api-new` - Create new API endpoints
-- `/api-test` - Test API endpoints
-- `/api-protect` - Add protection & validation
-
-### 🎨 UI Commands (2)
-
-- `/component-new` - Create React components
-- `/page-new` - Create Next.js pages
-
-### 💾 Supabase Commands (2)
-
-- `/types-gen` - Generate TypeScript types
-- `/edge-function-new` - Create Edge Functions
-
-### 🤖 Specialized AI Agents (11)
-
-**Architecture & Planning**
-- **tech-stack-researcher** - Technology choice recommendations with trade-offs
-- **system-architect** - Scalable system architecture design
-- **backend-architect** - Backend systems with data integrity & security
-- **frontend-architect** - Performant, accessible UI architecture
-- **requirements-analyst** - Transform ideas into concrete specifications
-
-**Code Quality & Performance**
-- **refactoring-expert** - Systematic refactoring and clean code
-- **performance-engineer** - Measurement-driven optimization
-- **security-engineer** - Vulnerability identification and security standards
-
-**Documentation & Research**
-- **technical-writer** - Clear, comprehensive documentation
-- **learning-guide** - Teaching programming concepts progressively
-- **deep-research-agent** - Comprehensive research with adaptive strategies
+- Node.js 20+ and npm
+- Supabase account
+- Google OAuth credentials (for authentication)
+- Anthropic API key (for AI features)
 
 ## Installation
 
-### From GitHub (Recommended)
+1. Clone the repository:
 
 ```bash
-# Add marketplace
-/plugin marketplace add edmund-io/edmunds-claude-code
-
-# Install plugin
-/plugin install edmunds-claude-code
+git clone <repository-url>
+cd JobApplicationApp
 ```
 
-### From Local Clone (for development)
+2. Install dependencies:
 
 ```bash
-git clone https://github.com/edmund-io/edmunds-claude-code.git
-cd edmunds-claude-code
-
-# Add as local marketplace
-/plugin marketplace add /path/to/edmunds-claude-code
-
-# Install plugin
-/plugin install edmunds-claude-code
+npm install
 ```
 
-## Best For
+3. Set up environment variables (see sections below)
 
-- Next.js developers
-- TypeScript projects
-- Supabase users
-- React developers
-- Full-stack engineers
-
-## Usage Examples
-
-### Planning a Feature
+4. Run database migrations:
 
 ```bash
-/feature-plan
-# Then describe your feature idea
+npx supabase migration up
 ```
 
-### Creating an API
+5. Start the development server:
 
 ```bash
-/api-new
-# Claude will scaffold a complete API route with types, validation, and error handling
+npm run dev
 ```
 
-### Research Tech Choices
+## Authentication Setup
 
-Just ask Claude questions like:
-- "Should I use WebSockets or SSE?"
-- "How should I structure this database?"
-- "What's the best library for X?"
+This app uses Supabase Auth with Google OAuth for user authentication.
 
-The tech-stack-researcher agent automatically activates and provides detailed, researched answers.
+### Configure Supabase
 
-## Philosophy
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Copy your project URL and anon key from Settings > API
+3. Enable Google OAuth provider in Authentication > Providers
 
-This setup emphasizes:
-- **Type Safety**: Never uses `any` types
-- **Best Practices**: Follows modern Next.js/React patterns
-- **Productivity**: Reduces repetitive scaffolding
-- **Research**: AI-powered tech decisions with evidence
+### Configure Google OAuth
 
-## Requirements
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Create a new project or select existing one
+3. Enable Google+ API
+4. Create OAuth 2.0 credentials
+5. Add authorized redirect URI: `https://<your-project>.supabase.co/auth/v1/callback`
+6. Copy Client ID and Client Secret
 
-- Claude Code 2.0.13+
-- Works with any project (optimized for Next.js + Supabase)
+### Add to Supabase
 
-## Customization
+1. In Supabase Dashboard, go to Authentication > Providers
+2. Enable Google provider
+3. Enter your Google Client ID and Client Secret
+4. Save changes
 
-After installation, you can customize any command by editing files in `.claude/commands/` and `.claude/agents/`.
+### Configure Environment
+
+Add to `.env.local`:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your-project-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+## AI Features Setup
+
+This app uses Anthropic's Claude API for AI-powered features including resume parsing, notes summarization, and job description analysis.
+
+### Get API Key
+
+1. Go to [Anthropic Console](https://console.anthropic.com)
+2. Sign up or log in
+3. Create a new API key
+4. Copy the key (starts with `sk-ant-`)
+
+### Configure Environment
+
+Add to `.env.local`:
+
+```env
+ANTHROPIC_API_KEY=sk-ant-your-actual-key-here
+```
+
+### Rate Limits
+
+To prevent abuse and control costs:
+- Resume parsing: 10 per hour per user
+- Notes summarization: 50 per hour per user
+- Job analysis: 20 per hour per user
+
+### Cost Estimates
+
+Based on Claude 3.5 Sonnet pricing:
+- Resume parse: ~$0.015 each
+- Notes summary: ~$0.005 each
+- Job analysis: ~$0.020 each
+
+**Expected cost per active user: ~$0.22/month** (with prompt caching)
+
+### Monitoring Usage
+
+Query your AI usage:
+
+```sql
+SELECT
+  operation_type,
+  COUNT(*) as total_calls,
+  SUM(cost_estimate) as total_cost_usd
+FROM ai_usage
+WHERE timestamp >= NOW() - INTERVAL '30 days'
+GROUP BY operation_type;
+```
+
+## Development
+
+### Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
+- `npm run type-check` - Run TypeScript compiler check
+- `npm test` - Run all tests (unit + E2E)
+- `npm run test:unit` - Run unit tests
+- `npm run test:e2e` - Run E2E tests
+
+### Running Tests
+
+Unit tests:
+```bash
+npm run test:unit
+```
+
+E2E tests:
+```bash
+npm run test:e2e
+```
+
+E2E tests with UI:
+```bash
+npm run test:e2e:ui
+```
+
+### Code Quality Standards
+
+Every commit must pass:
+- `npm run lint` - No ESLint errors or warnings
+- `npm run build` - Successful production build
+- `npm test` - All tests passing
+- No `any` types without justification
+- Error states and loading states included
+- Input validation and auth checks for all write operations
+
+## Project Structure
+
+```
+├── src/
+│   ├── app/                 # Next.js App Router pages
+│   ├── components/          # React components
+│   ├── lib/                 # Utilities and configurations
+│   ├── schemas/             # Zod validation schemas
+│   ├── server/              # Server actions
+│   └── types/               # TypeScript type definitions
+├── tests/                   # E2E tests
+├── supabase/
+│   └── migrations/          # Database migrations
+└── public/                  # Static assets
+```
 
 ## Contributing
 
-Feel free to:
-- Fork and customize for your needs
-- Submit issues or suggestions
-- Share your improvements
+1. Follow the Definition of Done (DoD) for all PRs
+2. Write tests for new features
+3. Update documentation as needed
+4. Run `npm run lint` and `npm run build` before committing
 
 ## License
 
-MIT - Use freely in your projects
-
-## Author
-
-Created by Edmund
-
----
-
-**Note**: This is my personal setup that I've refined over time. Commands are optimized for Next.js + Supabase workflows but work great with any modern web stack.
+MIT
