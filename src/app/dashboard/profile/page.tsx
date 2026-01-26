@@ -1,8 +1,10 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { ResumeUpload } from '@/components/profile/ResumeUpload';
+import { ParsedResumeDisplay } from '@/components/profile/ParsedResumeDisplay';
 import { FormSection } from '@/components/applications/FormSection';
-import { User, FileText, Settings } from 'lucide-react';
+import { User, FileText, Settings, AlertCircle } from 'lucide-react';
+import { RetryParsingButton } from '@/components/profile/RetryParsingButton';
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -16,10 +18,10 @@ export default async function ProfilePage() {
     redirect('/auth/login');
   }
 
-  // Get user profile
+  // Get user profile with parsed resume data
   const { data: profile } = await supabase
     .from('user_profiles')
-    .select('resume_url')
+    .select('resume_url, parsed_resume_data, resume_parsed_at, resume_parsing_error')
     .eq('user_id', user.id)
     .single();
 
@@ -76,6 +78,47 @@ export default async function ProfilePage() {
               <ResumeUpload currentResumeUrl={profile?.resume_url ?? null} />
             </FormSection>
           </div>
+
+          {/* Parsed Resume Data */}
+          {profile?.parsed_resume_data && profile.resume_parsed_at && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <FormSection
+                label="Parsed Resume Data"
+                description="AI-extracted information from your resume"
+              >
+                <div className="space-y-4">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    Last parsed: {new Date(profile.resume_parsed_at).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </div>
+                  <ParsedResumeDisplay parsedData={profile.parsed_resume_data} />
+                </div>
+              </FormSection>
+            </div>
+          )}
+
+          {/* Parsing Error */}
+          {profile?.resume_parsing_error && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-red-800 dark:text-red-200 mb-1">
+                    Resume Parsing Failed
+                  </h3>
+                  <p className="text-sm text-red-700 dark:text-red-300 mb-3">
+                    {profile.resume_parsing_error}
+                  </p>
+                  <RetryParsingButton />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Coming Soon Card */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">

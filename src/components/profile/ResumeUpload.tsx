@@ -1,22 +1,62 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { uploadResume, deleteResume } from '@/actions/resumes';
+import { triggerResumeParsing, getParsingJobStatus } from '@/actions/parse-resume';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Upload, FileText, X } from 'lucide-react';
+import { Upload, FileText, X, Loader2, Sparkles } from 'lucide-react';
 
 interface ResumeUploadProps {
   currentResumeUrl: string | null;
+  isParsed?: boolean;
 }
 
-export function ResumeUpload({ currentResumeUrl }: ResumeUploadProps) {
+type ParsingStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed';
+
+export function ResumeUpload({ currentResumeUrl, isParsed = false }: ResumeUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [resumeUrl, setResumeUrl] = useState(currentResumeUrl);
+  const [parsingStatus, setParsingStatus] = useState<ParsingStatus>(
+    isParsed ? 'completed' : 'idle'
+  );
+  const [parsingJobId, setParsingJobId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Poll for parsing job status
+  useEffect(() => {
+    if (!parsingJobId || parsingStatus === 'completed' || parsingStatus === 'failed') {
+      return;
+    }
+
+    const pollInterval = setInterval(async () => {
+      const result = await getParsingJobStatus(parsingJobId);
+
+      if (result.success) {
+        setParsingStatus(result.data.status);
+
+        if (result.data.status === 'completed') {
+          toast({
+            title: 'Resume parsed successfully',
+            description: 'Your resume has been analyzed by AI',
+          });
+          setParsingJobId(null);
+        } else if (result.data.status === 'failed') {
+          toast({
+            title: 'Parsing failed',
+            description: result.data.error || 'Failed to parse resume',
+            variant: 'destructive',
+          });
+          setParsingJobId(null);
+        }
+      }
+    }, 2000); // Poll every 2 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [parsingJobId, parsingStatus, toast]);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -54,6 +94,26 @@ export function ResumeUpload({ currentResumeUrl }: ResumeUploadProps) {
         title: 'Resume uploaded',
         description: `${result.data.fileName} uploaded successfully`,
       });
+
+      // Trigger resume parsing
+      setParsingStatus('pending');
+      const parseResult = await triggerResumeParsing();
+
+      if (parseResult.success) {
+        setParsingJobId(parseResult.data.jobId);
+        setParsingStatus('processing');
+        toast({
+          title: 'AI parsing started',
+          description: 'Analyzing your resume...',
+        });
+      } else {
+        setParsingStatus('failed');
+        toast({
+          title: 'Failed to start parsing',
+          description: parseResult.error,
+          variant: 'destructive',
+        });
+      }
     } else {
       toast({
         title: 'Upload failed',
@@ -74,6 +134,8 @@ export function ResumeUpload({ currentResumeUrl }: ResumeUploadProps) {
 
     if (result.success) {
       setResumeUrl(null);
+      setParsingStatus('idle');
+      setParsingJobId(null);
       toast({
         title: 'Resume deleted',
         description: 'Your resume has been removed',
@@ -89,6 +151,35 @@ export function ResumeUpload({ currentResumeUrl }: ResumeUploadProps) {
     setDeleting(false);
   };
 
+  const getParsingStatusDisplay = () => {
+    switch (parsingStatus) {
+      case 'pending':
+      case 'processing':
+        return (
+          <div className="flex items-center gap-2 text-sm text-blue-600">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>AI is analyzing your resume...</span>
+          </div>
+        );
+      case 'completed':
+        return (
+          <div className="flex items-center gap-2 text-sm text-green-600">
+            <Sparkles className="h-4 w-4" />
+            <span>Resume parsed successfully</span>
+          </div>
+        );
+      case 'failed':
+        return (
+          <div className="flex items-center gap-2 text-sm text-red-600">
+            <X className="h-4 w-4" />
+            <span>Parsing failed</span>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="space-y-4">
       <input
@@ -101,45 +192,52 @@ export function ResumeUpload({ currentResumeUrl }: ResumeUploadProps) {
       />
 
       {resumeUrl ? (
-        <div className="flex items-center justify-between p-4 border rounded-lg">
-          <div className="flex items-center gap-3">
-            <FileText className="h-8 w-8 text-blue-600" />
-            <div>
-              <p className="font-medium">Current Resume</p>
-              <p className="text-sm text-gray-500">Uploaded successfully</p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center gap-3">
+              <FileText className="h-8 w-8 text-blue-600" />
+              <div>
+                <p className="font-medium">Current Resume</p>
+                <p className="text-sm text-gray-500">Uploaded successfully</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading || parsingStatus === 'processing'}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Replace
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={deleting || parsingStatus === 'processing'}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Resume</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete your resume? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              Replace
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" disabled={deleting}>
-                  <X className="mr-2 h-4 w-4" />
-                  Delete
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Resume</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete your resume? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+          {getParsingStatusDisplay()}
         </div>
       ) : (
         <div className="border-2 border-dashed rounded-lg p-8 text-center">
