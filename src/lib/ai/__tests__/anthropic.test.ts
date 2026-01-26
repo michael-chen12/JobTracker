@@ -73,7 +73,7 @@ describe('AnthropicService', () => {
     id: 'msg_123',
     type: 'message',
     role: 'assistant',
-    content: [{ type: 'text', text: 'Test response' }],
+    content: [{ type: 'text', text: 'Test response', citations: [] }],
     model: 'claude-3-5-sonnet-20241022',
     stop_reason: 'end_turn',
     stop_sequence: null,
@@ -82,6 +82,9 @@ describe('AnthropicService', () => {
       output_tokens: 20,
       cache_creation_input_tokens: 0,
       cache_read_input_tokens: 0,
+      cache_creation: { input_tokens: 0 },
+      server_tool_use: { input_tokens: 0, output_tokens: 0 },
+      service_tier: 'default',
     },
   };
 

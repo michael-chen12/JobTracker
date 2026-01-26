@@ -2,7 +2,7 @@
 /node_modules
 /.pnp
 .pnp.js
-./docs
+
 
 # testing
 /coverage
@@ -45,3 +45,9 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# AI/Claude folders
+.claude/
+.claude-plugin/
+
+docs
