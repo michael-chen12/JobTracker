@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { extractDocumentText } from '@/lib/ai/document-parser';
 import { parseResumeText } from '@/lib/ai/resume-parser';
 import { revalidatePath } from 'next/cache';
@@ -44,14 +44,25 @@ export async function triggerResumeParsing(): Promise<TriggerParsingResult> {
   try {
     const supabase = await createClient();
 
-    // Get current user
+    // Get current auth user
     const {
-      data: { user },
+      data: { user: authUser },
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError || !user) {
+    if (authError || !authUser) {
       return { success: false, error: 'Unauthorized' };
+    }
+
+    // Get application user ID from users table
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_id', authUser.id)
+      .single();
+
+    if (userError || !user) {
+      return { success: false, error: 'User not found' };
     }
 
     // Get user's resume URL from profile
@@ -61,18 +72,29 @@ export async function triggerResumeParsing(): Promise<TriggerParsingResult> {
       .eq('user_id', user.id)
       .single();
 
-    if (profileError || !profile?.resume_url) {
+    if (profileError) {
+      console.error('Profile fetch error:', profileError);
+      return { success: false, error: `Profile error: ${profileError.message}` };
+    }
+
+    if (!profile?.resume_url) {
+      console.error('No resume URL in profile:', profile);
       return { success: false, error: 'No resume found. Please upload a resume first.' };
     }
 
     // Check if there's already a pending or processing job
-    const { data: existingJobs } = await supabase
+    const { data: existingJobs, error: existingJobsError } = await supabase
       .from('resume_parsing_jobs')
       .select('id, status')
       .eq('user_id', user.id)
       .in('status', ['pending', 'processing'])
       .order('created_at', { ascending: false })
       .limit(1);
+
+    if (existingJobsError) {
+      console.error('Error checking existing jobs:', existingJobsError);
+      // Don't fail - table might not exist yet, we'll catch that in the next step
+    }
 
     if (existingJobs && existingJobs.length > 0) {
       return {
@@ -94,7 +116,10 @@ export async function triggerResumeParsing(): Promise<TriggerParsingResult> {
 
     if (jobError || !job) {
       console.error('Failed to create parsing job:', jobError);
-      return { success: false, error: 'Failed to create parsing job' };
+      return {
+        success: false,
+        error: `Failed to create parsing job: ${jobError?.message || 'Unknown error'}`
+      };
     }
 
     // Trigger background processing
@@ -117,12 +142,13 @@ export async function triggerResumeParsing(): Promise<TriggerParsingResult> {
 /**
  * Process a resume parsing job (background task)
  * This function should be called by a background job processor
+ * Uses admin client for service role operations
  */
 export async function processResumeParsingJob(
   jobId: string
 ): Promise<ProcessingResult> {
   try {
-    const supabase = await createClient();
+    const supabase = await createAdminClient();
 
     // Get the job details
     const { data: job, error: jobError } = await supabase
@@ -153,25 +179,36 @@ export async function processResumeParsingJob(
       }
       const filePath = pathParts[1];
 
+      console.log('Downloading file from storage:', filePath);
+
       const { data: fileData, error: downloadError } = await supabase.storage
         .from('resumes')
         .download(filePath);
 
       if (downloadError || !fileData) {
+        console.error('Storage download error:', downloadError);
         throw new Error(`Failed to download resume: ${downloadError?.message}`);
       }
+
+      console.log('File downloaded, size:', fileData.size, 'type:', fileData.type);
 
       // Convert blob to buffer
       const arrayBuffer = await fileData.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
+
+      console.log('Buffer created, length:', buffer.length);
 
       // Determine MIME type from file extension
       const mimeType = filePath.endsWith('.pdf')
         ? 'application/pdf'
         : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
+      console.log('Extracting text with MIME type:', mimeType);
+
       // Extract text from document
       const { text } = await extractDocumentText(buffer, mimeType);
+
+      console.log('Text extracted, length:', text.length);
 
       if (!text || text.trim().length === 0) {
         throw new Error('No text extracted from resume');
@@ -257,13 +294,25 @@ export async function getParsingJobStatus(
   try {
     const supabase = await createClient();
 
+    // Get current auth user
     const {
-      data: { user },
+      data: { user: authUser },
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError || !user) {
+    if (authError || !authUser) {
       return { success: false, error: 'Unauthorized' };
+    }
+
+    // Get application user ID from users table
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_id', authUser.id)
+      .single();
+
+    if (userError || !user) {
+      return { success: false, error: 'User not found' };
     }
 
     // Get job status (RLS ensures user can only see their own jobs)

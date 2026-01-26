@@ -8,10 +8,10 @@ ADD COLUMN IF NOT EXISTS resume_parsed_at TIMESTAMPTZ,
 ADD COLUMN IF NOT EXISTS resume_parsing_error TEXT,
 ADD COLUMN IF NOT EXISTS skills TEXT[];
 
--- Create resume_parsing_jobs table
+-- Create resume_parsing_jobs table (references application users table, not auth.users)
 CREATE TABLE IF NOT EXISTS resume_parsing_jobs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   resume_url TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
   error_message TEXT,
@@ -27,12 +27,23 @@ CREATE INDEX IF NOT EXISTS idx_resume_parsing_jobs_status ON resume_parsing_jobs
 -- Enable RLS on resume_parsing_jobs
 ALTER TABLE resume_parsing_jobs ENABLE ROW LEVEL SECURITY;
 
--- Users can view their own parsing jobs
+-- Users can view their own parsing jobs (matches application users table)
 CREATE POLICY "Users can view own parsing jobs"
   ON resume_parsing_jobs
   FOR SELECT
   TO authenticated
-  USING (auth.uid() = user_id);
+  USING (EXISTS (
+    SELECT 1 FROM users WHERE users.id = resume_parsing_jobs.user_id AND users.auth_id = auth.uid()
+  ));
+
+-- Users can insert their own parsing jobs
+CREATE POLICY "Users can create own parsing jobs"
+  ON resume_parsing_jobs
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM users WHERE users.id = resume_parsing_jobs.user_id AND users.auth_id = auth.uid()
+  ));
 
 -- Service role can manage all jobs
 CREATE POLICY "Service role can manage all jobs"

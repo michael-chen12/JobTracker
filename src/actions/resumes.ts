@@ -17,14 +17,25 @@ export async function uploadResume(formData: FormData): Promise<UploadResumeResu
   try {
     const supabase = await createClient();
 
-    // Get current user
+    // Get current auth user
     const {
-      data: { user },
+      data: { user: authUser },
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError || !user) {
+    if (authError || !authUser) {
       return { success: false, error: 'Unauthorized' };
+    }
+
+    // Get application user ID from users table
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_id', authUser.id)
+      .single();
+
+    if (userError || !user) {
+      return { success: false, error: 'User profile not found' };
     }
 
     // Validate file
@@ -41,11 +52,11 @@ export async function uploadResume(formData: FormData): Promise<UploadResumeResu
       return { success: false, error: 'File size must be less than 5MB' };
     }
 
-    // Generate unique filename
+    // Generate unique filename (use auth ID for storage path to match RLS policy)
     const timestamp = Date.now();
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const fileName = `${timestamp}_${sanitizedName}`;
-    const filePath = `${user.id}/${fileName}`;
+    const filePath = `${authUser.id}/${fileName}`;
 
     // Upload to Supabase Storage
     const { error: uploadError } = await supabase.storage
@@ -65,11 +76,20 @@ export async function uploadResume(formData: FormData): Promise<UploadResumeResu
       .from('resumes')
       .getPublicUrl(filePath);
 
-    // Update user profile with resume URL
+    // Update user profile with resume URL (upsert to handle new users)
     const { error: updateError } = await supabase
       .from('user_profiles')
-      .update({ resume_url: urlData.publicUrl, updated_at: new Date().toISOString() })
-      .eq('user_id', user.id);
+      .upsert(
+        {
+          user_id: user.id,
+          resume_url: urlData.publicUrl,
+          updated_at: new Date().toISOString()
+        },
+        {
+          onConflict: 'user_id',
+          ignoreDuplicates: false
+        }
+      );
 
     if (updateError) {
       console.error('Profile update error:', updateError);
@@ -98,13 +118,25 @@ export async function deleteResume(): Promise<DeleteResumeResult> {
   try {
     const supabase = await createClient();
 
+    // Get current auth user
     const {
-      data: { user },
+      data: { user: authUser },
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError || !user) {
+    if (authError || !authUser) {
       return { success: false, error: 'Unauthorized' };
+    }
+
+    // Get application user ID from users table
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_id', authUser.id)
+      .single();
+
+    if (userError || !user) {
+      return { success: false, error: 'User profile not found' };
     }
 
     // Get current resume URL from profile
@@ -139,8 +171,17 @@ export async function deleteResume(): Promise<DeleteResumeResult> {
     // Update profile to remove resume URL
     const { error: updateError } = await supabase
       .from('user_profiles')
-      .update({ resume_url: null, updated_at: new Date().toISOString() })
-      .eq('user_id', user.id);
+      .upsert(
+        {
+          user_id: user.id,
+          resume_url: null,
+          updated_at: new Date().toISOString()
+        },
+        {
+          onConflict: 'user_id',
+          ignoreDuplicates: false
+        }
+      );
 
     if (updateError) {
       console.error('Profile update error:', updateError);

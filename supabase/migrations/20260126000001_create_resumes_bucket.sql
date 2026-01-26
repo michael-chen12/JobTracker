@@ -36,3 +36,10 @@ USING (
   bucket_id = 'resumes' AND
   (storage.foldername(name))[1] = auth.uid()::text
 );
+
+-- Service role can read all resumes (needed for parsing)
+DROP POLICY IF EXISTS "Service role can read all resumes" ON storage.objects;
+CREATE POLICY "Service role can read all resumes"
+ON storage.objects FOR SELECT
+TO service_role
+USING (bucket_id = 'resumes');

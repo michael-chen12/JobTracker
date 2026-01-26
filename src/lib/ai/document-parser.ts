@@ -27,21 +27,29 @@ export class DocumentParseError extends Error {
 }
 
 /**
- * Extract text from PDF buffer
+ * Extract text from PDF buffer using unpdf (Node.js native, no browser deps)
  */
 export async function extractPdfText(buffer: Buffer): Promise<ExtractedText> {
   try {
-    // Use dynamic require for CommonJS module in Node.js environment
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const pdfParse = require('pdf-parse');
-    const data = await pdfParse(buffer);
+    const { extractText } = await import('unpdf');
+
+    // Convert Buffer to Uint8Array as required by unpdf
+    const uint8Array = new Uint8Array(buffer);
+
+    // Extract text from PDF
+    const { text, totalPages } = await extractText(uint8Array, {
+      mergePages: true,
+    });
+
     return {
-      text: data.text,
-      pageCount: data.numpages,
+      text: text,
+      pageCount: totalPages,
     };
   } catch (error) {
+    console.error('PDF parsing error details:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new DocumentParseError(
-      'Failed to extract text from PDF',
+      `Failed to extract text from PDF: ${errorMessage}`,
       'application/pdf',
       error
     );

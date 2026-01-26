@@ -92,7 +92,7 @@ describe('resume-parser', () => {
       // Verify API call was made correctly
       expect(mockCreateMessage).toHaveBeenCalledWith(
         expect.objectContaining({
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-3-haiku-20240307',
           max_tokens: 4096,
           system: expect.arrayContaining([
             expect.objectContaining({

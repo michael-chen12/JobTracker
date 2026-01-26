@@ -38,9 +38,20 @@ describe('Resume Actions', () => {
 
     it('should reject missing file', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'test-user-id' } },
+        data: { user: { id: 'test-auth-id' } },
         error: null,
       });
+
+      // Mock users table query (required for getting application user ID)
+      const mockUsersQuery = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: { id: 'test-user-id' },
+          error: null,
+        }),
+      };
+      mockSupabase.from.mockReturnValue(mockUsersQuery);
 
       const formData = new FormData();
       const result = await uploadResume(formData);

@@ -71,10 +71,10 @@ export async function parseResumeText(input: {
   try {
     const anthropic = getAnthropicService();
 
-    // Call Claude with prompt caching enabled
+    // Call Claude with prompt caching enabled (using Haiku for cost efficiency)
     const response = await anthropic.createMessage(
       {
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-3-haiku-20240307',
         max_tokens: 4096,
         system: [
           {
