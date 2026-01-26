@@ -31,7 +31,9 @@ describe('Resume Actions', () => {
       const result = await uploadResume(formData);
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Unauthorized');
+      if (!result.success) {
+        expect(result.error).toBe('Unauthorized');
+      }
     });
 
     it('should reject missing file', async () => {
@@ -44,7 +46,9 @@ describe('Resume Actions', () => {
       const result = await uploadResume(formData);
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('No file provided');
+      if (!result.success) {
+        expect(result.error).toBe('No file provided');
+      }
     });
   });
 });

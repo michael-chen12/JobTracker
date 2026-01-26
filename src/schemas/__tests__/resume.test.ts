@@ -21,7 +21,7 @@ describe('resumeUploadSchema', () => {
     const result = resumeUploadSchema.safeParse({ file, size: 6 * 1024 * 1024 });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain('5MB');
+      expect(result.error.issues[0]?.message).toContain('5MB');
     }
   });
 
@@ -30,7 +30,7 @@ describe('resumeUploadSchema', () => {
     const result = resumeUploadSchema.safeParse({ file, size: 1024 });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain('PDF or DOCX');
+      expect(result.error.issues[0]?.message).toContain('PDF or DOCX');
     }
   });
 });

@@ -121,10 +121,10 @@ export async function deleteResume(): Promise<DeleteResumeResult> {
     // Extract file path from URL
     const url = new URL(profile.resume_url);
     const pathParts = url.pathname.split('/resumes/');
-    if (pathParts.length < 2) {
+    if (pathParts.length < 2 || !pathParts[1]) {
       return { success: false, error: 'Invalid resume URL' };
     }
-    const filePath = pathParts[1];
+    const filePath: string = pathParts[1];
 
     // Delete from storage
     const { error: deleteError } = await supabase.storage
