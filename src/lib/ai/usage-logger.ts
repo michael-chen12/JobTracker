@@ -25,7 +25,7 @@ export async function logUsage(params: LogUsageParams): Promise<void> {
   // Estimate cost based on tokens (Claude 3.5 Sonnet pricing)
   // Input: $3/MTok, Output: $15/MTok
   const costEstimate = params.tokensUsed
-    ? calculateCost(params.tokensUsed, params.operationType)
+    ? calculateCost(params.tokensUsed)
     : null;
 
   // Truncate samples to 500 chars
@@ -54,14 +54,13 @@ export async function logUsage(params: LogUsageParams): Promise<void> {
 }
 
 /**
- * Estimate cost in USD based on tokens and operation type
+ * Estimate cost in USD based on tokens
  *
- * Rough estimates based on Claude 3.5 Sonnet pricing:
- * - Resume parse: ~2K input + 1K output = $0.015
- * - Notes summary: ~500 input + 200 output = $0.005
- * - Job analysis: ~3K input + 1K output = $0.020
+ * Based on Claude 3.5 Sonnet pricing:
+ * - Input: $3/MTok, Output: $15/MTok
+ * - Assumes 60% input, 40% output split
  */
-function calculateCost(tokens: number, operationType: OperationType): number {
+function calculateCost(tokens: number): number {
   // Simplified: assume 60% input, 40% output
   const inputTokens = Math.floor(tokens * 0.6);
   const outputTokens = Math.floor(tokens * 0.4);
