@@ -2,7 +2,7 @@
  * AI service types and interfaces
  */
 
-export type OperationType = 'resume_parse' | 'summarize_notes' | 'analyze_job';
+export type OperationType = 'resume_parse' | 'summarize_notes' | 'job_analysis';
 
 export interface AIUsageLog {
   id: string;
@@ -24,7 +24,7 @@ export interface AIUsageLog {
 export interface RateLimitConfig {
   resume_parse: number;      // 10 per hour
   summarize_notes: number;   // 50 per hour
-  analyze_job: number;       // 20 per hour
+  job_analysis: number;      // 10 per hour
 }
 
 export interface AIServiceResponse<T> {
@@ -70,6 +70,24 @@ export interface NotesSummary {
 }
 
 // Job matching output
+export interface MatchAnalysis {
+  base_score: number;
+  adjusted_score: number;
+  adjustment: number;
+  reasoning: string;
+  matching_skills: string[];
+  missing_skills: string[];
+  strengths: string[];
+  concerns: string[];
+  recommendations: string[];
+  breakdown: {
+    skills_score: number;
+    experience_score: number;
+    education_score: number;
+    other_score: number;
+  };
+}
+
 export interface JobMatchAnalysis {
   score: number;
   matchingSkills: string[];

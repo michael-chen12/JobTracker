@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { ApplicationRow } from './columns';
 import { StatusBadge } from './StatusBadge';
+import { MatchScoreBadge } from './MatchScoreBadge';
 import { Calendar, MapPin } from 'lucide-react';
 
 interface ApplicationCardProps {
@@ -35,6 +36,16 @@ export function ApplicationCard({ application }: ApplicationCardProps) {
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
         {application.position}
       </p>
+
+      {/* Match Score Badge */}
+      {(application.match_score !== null || application.job_description || application.job_url) && (
+        <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+          <MatchScoreBadge
+            applicationId={application.id}
+            matchScore={application.match_score}
+          />
+        </div>
+      )}
 
       {/* Metadata */}
       <div className="space-y-2 text-xs text-gray-500 dark:text-gray-500">

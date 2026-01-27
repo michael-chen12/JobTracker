@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -16,14 +17,15 @@ interface EditableFieldProps {
   value: string;
   onSave: (value: string) => void | Promise<void>;
   placeholder?: string;
-  type?: 'text' | 'select';
+  type?: 'text' | 'select' | 'textarea';
   options?: Array<{ label: string; value: string }>;
+  rows?: number;
 }
 
 /**
  * EditableField - Inline editable field component
  *
- * Click to edit mode, save/cancel actions, supports text and select inputs
+ * Click to edit mode, save/cancel actions, supports text, textarea, and select inputs
  */
 export function EditableField({
   value,
@@ -31,6 +33,7 @@ export function EditableField({
   placeholder = 'Click to add',
   type = 'text',
   options = [],
+  rows = 4,
 }: EditableFieldProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
@@ -69,26 +72,40 @@ export function EditableField({
 
   if (!isEditing) {
     return (
-      <button
-        onClick={() => setIsEditing(true)}
-        className="group flex items-center gap-2 text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left w-full"
-      >
-        <span className={!value ? 'text-gray-400 dark:text-gray-500' : ''}>
+      <div className="group flex items-start gap-2 w-full">
+        <span className={!value ? 'text-gray-400 dark:text-gray-500 flex-1' : 'whitespace-pre-wrap flex-1 text-gray-900 dark:text-white'}>
           {value || placeholder}
         </span>
-        <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-      </button>
+        <button
+          onClick={() => setIsEditing(true)}
+          className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1 hover:text-blue-600 dark:hover:text-blue-400"
+          type="button"
+        >
+          <Pencil className="h-3 w-3" />
+        </button>
+      </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-2">
       {type === 'text' ? (
         <Input
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
+          className="flex-1"
+          autoFocus
+          disabled={isSaving}
+        />
+      ) : type === 'textarea' ? (
+        <Textarea
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          rows={rows}
           className="flex-1"
           autoFocus
           disabled={isSaving}

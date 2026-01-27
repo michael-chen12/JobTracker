@@ -20,8 +20,10 @@ import { NotesSection } from './NotesSection';
 import { DocumentsSection } from './DocumentsSection';
 import { DeleteApplicationButton } from './DeleteApplicationButton';
 import { EditableField } from './EditableField';
+import { MatchAnalysisCard } from './MatchAnalysisCard';
 import { updateApplication } from '@/actions/applications';
 import { useToast } from '@/hooks/use-toast';
+import type { MatchAnalysis } from '@/types/ai';
 
 interface ApplicationDetailProps {
   application: ApplicationWithRelations;
@@ -41,6 +43,8 @@ export function ApplicationDetail({ application }: ApplicationDetailProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState<Record<string, boolean>>({});
+  const [matchScore, setMatchScore] = useState(application.match_score);
+  const [matchAnalysis, setMatchAnalysis] = useState(application.match_analysis);
 
   const handleFieldUpdate = async (field: string, value: unknown) => {
     try {
@@ -262,18 +266,33 @@ export function ApplicationDetail({ application }: ApplicationDetailProps) {
             </div>
 
             {/* Job Description */}
-            {application.job_description && (
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                  Job Description
-                </h3>
-                <p className="text-gray-900 dark:text-white whitespace-pre-wrap text-sm">
-                  {application.job_description}
-                </p>
-              </div>
-            )}
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                Job Description
+              </h3>
+              <EditableField
+                value={application.job_description || ''}
+                onSave={(value) => handleFieldUpdate('job_description', value || null)}
+                placeholder="Add job description for better match analysis"
+                type="textarea"
+                rows={10}
+              />
+            </div>
           </div>
         </div>
+
+        {/* Match Analysis Card */}
+        <MatchAnalysisCard
+          applicationId={application.id}
+          matchScore={matchScore}
+          matchAnalysis={matchAnalysis as MatchAnalysis | null}
+          analyzedAt={application.analyzed_at}
+          onAnalysisComplete={(score, analysis) => {
+            setMatchScore(score);
+            setMatchAnalysis(analysis as any);
+          }}
+          className="mb-6"
+        />
 
         {/* Notes Section */}
         <NotesSection

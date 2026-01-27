@@ -79,7 +79,18 @@ export function KanbanBoard({ applications }: KanbanBoardProps) {
     if (!over) return;
 
     const applicationId = active.id as string;
-    const newStatus = over.id as ApplicationStatus;
+    let newStatus = over.id as string;
+
+    // If dropped over a card (not a column), find the column that card belongs to
+    const droppedOverApplication = applications.find((app) => app.id === newStatus);
+    if (droppedOverApplication) {
+      newStatus = droppedOverApplication.status;
+    }
+
+    // Validate that newStatus is a valid column
+    if (!COLUMNS.find((col) => col.id === newStatus)) {
+      return;
+    }
 
     // Find the application being dragged
     const application = applications.find((app) => app.id === applicationId);
@@ -90,12 +101,12 @@ export function KanbanBoard({ applications }: KanbanBoardProps) {
 
     // Optimistic update - update UI immediately
     const originalStatus = application.status;
-    application.status = newStatus;
+    application.status = newStatus as ApplicationStatus;
 
     // Update on server
     try {
       const result = await updateApplication(applicationId, {
-        status: newStatus,
+        status: newStatus as ApplicationStatus,
       });
 
       if (result.error) {

@@ -5,7 +5,7 @@ import type { OperationType, RateLimitConfig } from '@/types/ai';
 const RATE_LIMITS: RateLimitConfig = {
   resume_parse: 10,
   summarize_notes: 50,
-  analyze_job: 20,
+  job_analysis: 20,
 };
 
 /**

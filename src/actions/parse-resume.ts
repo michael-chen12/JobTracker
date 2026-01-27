@@ -171,13 +171,23 @@ export async function processResumeParsingJob(
       .eq('id', jobId);
 
     try {
-      // Download resume file from storage
-      const url = new URL(job.resume_url);
-      const pathParts = url.pathname.split('/resumes/');
-      if (pathParts.length < 2 || !pathParts[1]) {
-        throw new Error('Invalid resume URL format');
+      // The resume_url is now just a file path (e.g., "auth-id/filename.pdf")
+      // not a full URL anymore
+      let filePath = job.resume_url;
+      
+      // If it's a full URL (backwards compatibility), extract the path
+      if (filePath.startsWith('http')) {
+        try {
+          const url = new URL(filePath);
+          const pathParts = url.pathname.split('/resumes/');
+          if (pathParts.length < 2 || !pathParts[1]) {
+            throw new Error('Invalid resume URL format');
+          }
+          filePath = pathParts[1];
+        } catch (urlError) {
+          throw new Error('Invalid resume URL format');
+        }
       }
-      const filePath = pathParts[1];
 
       console.log('Downloading file from storage:', filePath);
 

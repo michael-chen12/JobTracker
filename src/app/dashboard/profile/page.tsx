@@ -18,12 +18,33 @@ export default async function ProfilePage() {
     redirect('/auth/login');
   }
 
+  // Get database user ID from auth ID
+  const { data: dbUser } = await supabase
+    .from('users')
+    .select('id')
+    .eq('auth_id', user.id)
+    .single();
+
+  if (!dbUser) {
+    redirect('/auth/login');
+  }
+
   // Get user profile with parsed resume data
   const { data: profile } = await supabase
     .from('user_profiles')
     .select('resume_url, parsed_resume_data, resume_parsed_at, resume_parsing_error')
-    .eq('user_id', user.id)
+    .eq('user_id', dbUser.id)
     .single();
+
+  // If resume_url exists (it's a file path), generate a signed URL
+  let resumeSignedUrl: string | null = null;
+  if (profile?.resume_url) {
+    const { data: signedUrlData } = await supabase.storage
+      .from('resumes')
+      .createSignedUrl(profile.resume_url, 3600); // 1 hour expiry
+    
+    resumeSignedUrl = signedUrlData?.signedUrl || null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -75,7 +96,10 @@ export default async function ProfilePage() {
               label="Resume"
               description="Upload your resume for AI-powered job matching and analysis"
             >
-              <ResumeUpload currentResumeUrl={profile?.resume_url ?? null} />
+              <ResumeUpload 
+                currentResumeUrl={resumeSignedUrl} 
+                isParsed={!!profile?.parsed_resume_data}
+              />
             </FormSection>
           </div>
 

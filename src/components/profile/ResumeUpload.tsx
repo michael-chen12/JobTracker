@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { uploadResume, deleteResume } from '@/actions/resumes';
@@ -25,6 +26,7 @@ export function ResumeUpload({ currentResumeUrl, isParsed = false }: ResumeUploa
   const [parsingJobId, setParsingJobId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const router = useRouter();
 
   // Poll for parsing job status
   useEffect(() => {
@@ -44,6 +46,8 @@ export function ResumeUpload({ currentResumeUrl, isParsed = false }: ResumeUploa
             description: 'Your resume has been analyzed by AI',
           });
           setParsingJobId(null);
+          // Refresh the page to show parsed resume data
+          router.refresh();
         } else if (result.data.status === 'failed') {
           toast({
             title: 'Parsing failed',
@@ -56,7 +60,7 @@ export function ResumeUpload({ currentResumeUrl, isParsed = false }: ResumeUploa
     }, 2000); // Poll every 2 seconds
 
     return () => clearInterval(pollInterval);
-  }, [parsingJobId, parsingStatus, toast]);
+  }, [parsingJobId, parsingStatus, toast, router]);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -202,6 +206,15 @@ export function ResumeUpload({ currentResumeUrl, isParsed = false }: ResumeUploa
               </div>
             </div>
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(resumeUrl, '_blank')}
+                disabled={!resumeUrl}
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                View Resume
+              </Button>
               <Button
                 variant="outline"
                 size="sm"

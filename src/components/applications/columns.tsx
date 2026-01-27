@@ -2,6 +2,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { ArrowUpDown } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
+import { MatchScoreBadge } from './MatchScoreBadge';
 
 export interface ApplicationRow {
   id: string;
@@ -12,6 +13,11 @@ export interface ApplicationRow {
   applied_date: string | null;
   created_at: string;
   updated_at: string;
+  match_score: number | null;
+  match_analysis: any | null;
+  analyzed_at: string | null;
+  job_description: string | null;
+  job_url: string | null;
 }
 
 export const columns: ColumnDef<ApplicationRow>[] = [
@@ -57,6 +63,38 @@ export const columns: ColumnDef<ApplicationRow>[] = [
     accessorKey: 'status',
     header: 'Status',
     cell: ({ row }) => <StatusBadge status={row.getValue('status')} />,
+  },
+  {
+    accessorKey: 'match_score',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="hover:bg-gray-100 dark:hover:bg-gray-800"
+        >
+          Match
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const matchScore = row.getValue('match_score') as number | null;
+      const hasJobInfo = row.original.job_description || row.original.job_url;
+      
+      if (!matchScore && !hasJobInfo) {
+        return <div className="text-sm text-gray-400 dark:text-gray-600">—</div>;
+      }
+      
+      return (
+        <div onClick={(e) => e.stopPropagation()}>
+          <MatchScoreBadge
+            applicationId={row.original.id}
+            matchScore={matchScore}
+          />
+        </div>
+      );
+    },
   },
   {
     accessorKey: 'location',

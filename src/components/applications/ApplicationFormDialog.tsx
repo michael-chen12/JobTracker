@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createApplicationSchema, type CreateApplicationInput } from '@/schemas/application';
 import { createApplication } from '@/actions/applications';
+import { analyzeJobMatch } from '@/actions/analyze-job';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -135,6 +136,48 @@ export function ApplicationFormDialog({
           title: 'Success',
           description: 'Application created successfully',
         });
+
+        // Auto-trigger job analysis if job info exists
+        const hasJobInfo = cleanedData.job_url || cleanedData.job_description;
+        if (hasJobInfo && result.data?.id) {
+          const analysisToastId = toast({
+            title: 'Analyzing job match...',
+            description: 'This may take 10-15 seconds',
+          });
+
+          // Run analysis in background (don't await)
+          analyzeJobMatch(result.data.id)
+            .then((analysisResult) => {
+              if (analysisResult.success && analysisResult.score !== undefined) {
+                toast({
+                  title: `Match score: ${analysisResult.score}%`,
+                  description: 'View details in the application page',
+                });
+              } else if (analysisResult.error) {
+                // Only show error toast if it's not a rate limit or missing info error
+                const isExpectedError =
+                  analysisResult.error.includes('rate limit') ||
+                  analysisResult.error.includes('manual') ||
+                  analysisResult.error.includes('profile');
+
+                if (!isExpectedError) {
+                  toast({
+                    variant: 'destructive',
+                    title: 'Analysis failed',
+                    description: analysisResult.error,
+                  });
+                }
+              }
+            })
+            .catch((error) => {
+              console.error('Analysis error:', error);
+              toast({
+                variant: 'destructive',
+                title: 'Analysis failed',
+                description: 'You can re-analyze from the application page.',
+              });
+            });
+        }
 
         // Reset form
         form.reset();

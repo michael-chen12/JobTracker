@@ -71,18 +71,17 @@ export async function uploadResume(formData: FormData): Promise<UploadResumeResu
       return { success: false, error: 'Failed to upload file' };
     }
 
-    // Get public URL (actually signed URL for private bucket)
-    const { data: urlData } = supabase.storage
-      .from('resumes')
-      .getPublicUrl(filePath);
+    // Store the file path instead of URL (we'll generate signed URLs on demand)
+    // This way we avoid dealing with expired signed URLs
+    const storedPath = filePath;
 
-    // Update user profile with resume URL (upsert to handle new users)
+    // Update user profile with resume file path (upsert to handle new users)
     const { error: updateError } = await supabase
       .from('user_profiles')
       .upsert(
         {
           user_id: user.id,
-          resume_url: urlData.publicUrl,
+          resume_url: storedPath, // Store path, not URL
           updated_at: new Date().toISOString()
         },
         {
@@ -98,11 +97,18 @@ export async function uploadResume(formData: FormData): Promise<UploadResumeResu
       return { success: false, error: 'Failed to update profile' };
     }
 
+    // Generate a signed URL for immediate use (valid for 1 hour)
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+      .from('resumes')
+      .createSignedUrl(filePath, 3600); // 1 hour expiry
+
+    const displayUrl = signedUrlData?.signedUrl || storedPath;
+
     revalidatePath('/dashboard/profile');
 
     return {
       success: true,
-      data: { url: urlData.publicUrl, fileName: file.name },
+      data: { url: displayUrl, fileName: file.name },
     };
   } catch (error) {
     console.error('Unexpected error:', error);
@@ -150,13 +156,23 @@ export async function deleteResume(): Promise<DeleteResumeResult> {
       return { success: false, error: 'No resume found' };
     }
 
-    // Extract file path from URL
-    const url = new URL(profile.resume_url);
-    const pathParts = url.pathname.split('/resumes/');
-    if (pathParts.length < 2 || !pathParts[1]) {
-      return { success: false, error: 'Invalid resume URL' };
+    // The resume_url is now just a file path (e.g., "auth-id/filename.pdf")
+    // not a full URL anymore
+    let filePath = profile.resume_url;
+    
+    // If it's a full URL (backwards compatibility), extract the path
+    if (filePath.startsWith('http')) {
+      try {
+        const url = new URL(filePath);
+        const pathParts = url.pathname.split('/resumes/');
+        if (pathParts.length < 2 || !pathParts[1]) {
+          return { success: false, error: 'Invalid resume URL' };
+        }
+        filePath = pathParts[1];
+      } catch (urlError) {
+        return { success: false, error: 'Invalid resume URL format' };
+      }
     }
-    const filePath: string = pathParts[1];
 
     // Delete from storage
     const { error: deleteError } = await supabase.storage
@@ -168,13 +184,16 @@ export async function deleteResume(): Promise<DeleteResumeResult> {
       return { success: false, error: 'Failed to delete file' };
     }
 
-    // Update profile to remove resume URL
+    // Update profile to remove resume URL and parsed data
     const { error: updateError } = await supabase
       .from('user_profiles')
       .upsert(
         {
           user_id: user.id,
           resume_url: null,
+          parsed_resume_data: null,
+          resume_parsed_at: null,
+          resume_parsing_error: null,
           updated_at: new Date().toISOString()
         },
         {
