@@ -5,8 +5,21 @@ import type { OperationType, RateLimitConfig } from '@/types/ai';
 const RATE_LIMITS: RateLimitConfig = {
   resume_parse: 10,
   summarize_notes: 50,
-  job_analysis: 20,
+  job_analysis: 10,
 };
+
+const OPERATION_LABELS: Record<OperationType, string> = {
+  resume_parse: 'resume parsing',
+  summarize_notes: 'notes summarization',
+  job_analysis: 'job analysis',
+};
+
+function formatResetTime(resetTime: Date): string {
+  return resetTime.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
 
 /**
  * Check if user has exceeded rate limit for operation
@@ -54,8 +67,10 @@ export async function checkRateLimit(
       ? new Date(new Date(oldestOp.timestamp).getTime() + 60 * 60 * 1000)
       : new Date(Date.now() + 60 * 60 * 1000);
 
+    const label = OPERATION_LABELS[operationType] ?? operationType;
+
     throw new RateLimitError(
-      `Rate limit exceeded for ${operationType}. Limit: ${limit} per hour. Try again after ${resetTime.toLocaleString()}.`,
+      `Rate limit reached. You've used all ${limit} ${label} actions this hour. Resets at ${formatResetTime(resetTime)}.`,
       operationType,
       limit,
       resetTime

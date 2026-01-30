@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { CheckCircle2, AlertCircle, Lightbulb, ChevronDown } from 'lucide-react';
+import { useEffect, useState, useTransition } from 'react';
+import { CheckCircle2, AlertCircle, Lightbulb, ChevronDown, Loader2 } from 'lucide-react';
 import { CircularProgress } from '@/components/ui/circular-progress';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +37,41 @@ export function MatchAnalysisCard({
   const [localScore, setLocalScore] = useState(matchScore);
   const [localAnalysis, setLocalAnalysis] = useState(matchAnalysis);
   const { toast } = useToast();
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [analysisStep, setAnalysisStep] = useState<'scraping' | 'calculating' | 'analyzing'>('scraping');
+
+  useEffect(() => {
+    if (!isPending) {
+      setAnalysisProgress(0);
+      setAnalysisStep('scraping');
+      return;
+    }
+
+    let progress = 10;
+    setAnalysisProgress(progress);
+    setAnalysisStep('scraping');
+
+    const interval = setInterval(() => {
+      progress = Math.min(95, progress + 7);
+      setAnalysisProgress(progress);
+
+      if (progress < 40) {
+        setAnalysisStep('scraping');
+      } else if (progress < 70) {
+        setAnalysisStep('calculating');
+      } else {
+        setAnalysisStep('analyzing');
+      }
+    }, 700);
+
+    return () => clearInterval(interval);
+  }, [isPending]);
+
+  const getStepLabel = (step: typeof analysisStep) => {
+    if (step === 'scraping') return 'Fetching job description...';
+    if (step === 'calculating') return 'Calculating base score...';
+    return 'AI is analyzing fit...';
+  };
 
   const handleReanalyze = async () => {
     startTransition(async () => {
@@ -69,9 +104,29 @@ export function MatchAnalysisCard({
           <p className="text-sm text-muted-foreground text-center max-w-md">
             Get AI-powered insights on how well this job matches your profile
           </p>
-          <Button onClick={handleReanalyze} disabled={isPending} size="lg">
-            {isPending ? 'Analyzing...' : 'Analyze Job Match'}
-          </Button>
+          {isPending ? (
+            <div className="flex flex-col items-center gap-4 w-full max-w-xs">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <div className="text-center space-y-1">
+                <p className="text-sm font-medium">{getStepLabel(analysisStep)}</p>
+                <p className="text-xs text-muted-foreground">
+                  This may take 10-15 seconds
+                </p>
+              </div>
+              <div className="w-full">
+                <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all duration-500"
+                    style={{ width: `${analysisProgress}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <Button onClick={handleReanalyze} disabled={isPending} size="lg">
+              Analyze Job Match
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -113,6 +168,23 @@ export function MatchAnalysisCard({
             </Button>
           </div>
         </div>
+
+        {isPending && (
+          <div className="mb-6 rounded-lg border bg-muted/30 p-4">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <div className="flex-1 space-y-2">
+                <div className="text-sm font-medium">{getStepLabel(analysisStep)}</div>
+                <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all duration-500"
+                    style={{ width: `${analysisProgress}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Score Breakdown - Stacked on mobile, side-by-side on desktop */}
         <div className="space-y-4 mb-6">

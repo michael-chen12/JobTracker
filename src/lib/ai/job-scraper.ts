@@ -33,6 +33,29 @@ Ignore:
 
 Return only the cleaned job description text (max 2000 words).`;
 
+const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504]);
+
+function shouldRetryResponse(response: Response): boolean {
+  return RETRYABLE_STATUS.has(response.status);
+}
+
+function shouldRetryError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  // Network or transient errors
+  if (error.name === 'AbortError') {
+    return true;
+  }
+
+  return error.message.toLowerCase().includes('fetch');
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
  * Strip HTML tags and decode entities
  */
@@ -128,20 +151,44 @@ export async function fetchJobDescription(
     }
 
     // 2. Try to fetch HTML with timeout and retry
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    let response: Response | null = null;
+    let lastError: unknown = null;
 
-    let response: Response;
-    try {
-      response = await fetch(jobUrl, {
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (compatible; JobTrackerBot/1.0; +https://jobtracker.app)',
-        },
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timeoutId);
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      try {
+        response = await fetch(jobUrl, {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (compatible; JobTrackerBot/1.0; +https://jobtracker.app)',
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok && shouldRetryResponse(response) && attempt < 2) {
+          await sleep(500 * attempt);
+          continue;
+        }
+
+        break;
+      } catch (error) {
+        lastError = error;
+
+        if (shouldRetryError(error) && attempt < 2) {
+          await sleep(500 * attempt);
+          continue;
+        }
+
+        throw error;
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    if (!response) {
+      throw lastError ?? new Error('Failed to fetch job description');
     }
 
     if (!response.ok) {

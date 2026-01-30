@@ -116,7 +116,7 @@ ANTHROPIC_API_KEY=sk-ant-your-actual-key-here
 To prevent abuse and control costs:
 - Resume parsing: 10 per hour per user
 - Notes summarization: 50 per hour per user
-- Job analysis: 20 per hour per user
+- Job analysis: 10 per hour per user
 
 ### Cost Estimates
 

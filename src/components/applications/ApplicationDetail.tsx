@@ -22,6 +22,7 @@ import { DeleteApplicationButton } from './DeleteApplicationButton';
 import { EditableField } from './EditableField';
 import { MatchAnalysisCard } from './MatchAnalysisCard';
 import { updateApplication } from '@/actions/applications';
+import { analyzeJobMatch } from '@/actions/analyze-job';
 import { useToast } from '@/hooks/use-toast';
 import type { MatchAnalysis } from '@/types/ai';
 
@@ -45,6 +46,41 @@ export function ApplicationDetail({ application }: ApplicationDetailProps) {
   const [isEditing, setIsEditing] = useState<Record<string, boolean>>({});
   const [matchScore, setMatchScore] = useState(application.match_score);
   const [matchAnalysis, setMatchAnalysis] = useState(application.match_analysis);
+  const [analyzedAt, setAnalyzedAt] = useState(application.analyzed_at);
+
+  const triggerAnalysis = () => {
+    toast({
+      title: 'Analyzing job match...',
+      description: 'This may take 10-15 seconds',
+    });
+
+    analyzeJobMatch(application.id)
+      .then((result) => {
+        if (result.success && result.score !== undefined && result.analysis) {
+          setMatchScore(result.score);
+          setMatchAnalysis(result.analysis as any);
+          setAnalyzedAt(new Date().toISOString());
+          toast({
+            title: `Match score: ${result.score}%`,
+            description: 'Analysis updated successfully',
+          });
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Analysis failed',
+            description: result.error || 'Analysis failed',
+          });
+        }
+      })
+      .catch((error) => {
+        console.error('Analysis error:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Analysis failed',
+          description: 'You can re-analyze from the application page.',
+        });
+      });
+  };
 
   const handleFieldUpdate = async (field: string, value: unknown) => {
     try {
@@ -64,6 +100,15 @@ export function ApplicationDetail({ application }: ApplicationDetailProps) {
           description: 'Application updated successfully',
         });
         router.refresh();
+
+        const shouldAnalyze =
+          (field === 'job_description' || field === 'job_url') &&
+          typeof value === 'string' &&
+          value.trim().length > 0;
+
+        if (shouldAnalyze) {
+          triggerAnalysis();
+        }
       }
     } catch (error) {
       console.error('Failed to update field:', error);
@@ -286,10 +331,11 @@ export function ApplicationDetail({ application }: ApplicationDetailProps) {
           applicationId={application.id}
           matchScore={matchScore}
           matchAnalysis={matchAnalysis as MatchAnalysis | null}
-          analyzedAt={application.analyzed_at}
+          analyzedAt={analyzedAt}
           onAnalysisComplete={(score, analysis) => {
             setMatchScore(score);
             setMatchAnalysis(analysis as any);
+            setAnalyzedAt(new Date().toISOString());
           }}
           className="mb-6"
         />

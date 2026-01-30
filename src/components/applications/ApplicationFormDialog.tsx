@@ -155,10 +155,11 @@ export function ApplicationFormDialog({
                 });
               } else if (analysisResult.error) {
                 // Only show error toast if it's not a rate limit or missing info error
+                const errorMessage = analysisResult.error.toLowerCase();
                 const isExpectedError =
-                  analysisResult.error.includes('rate limit') ||
-                  analysisResult.error.includes('manual') ||
-                  analysisResult.error.includes('profile');
+                  errorMessage.includes('rate limit') ||
+                  errorMessage.includes('manual') ||
+                  errorMessage.includes('profile');
 
                 if (!isExpectedError) {
                   toast({
