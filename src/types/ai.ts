@@ -67,6 +67,7 @@ export interface NotesSummary {
   summary: string;
   insights: string[];
   actionItems: string[];
+  followUpNeeds: string[];
 }
 
 // Job matching output

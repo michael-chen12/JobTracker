@@ -42,7 +42,7 @@ import {
 import { FormSection } from './FormSection';
 import { TwoColumnRow } from './TwoColumnRow';
 import { SalaryRangeInput } from './SalaryRangeInput';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Loader2 } from 'lucide-react';
 
 interface ApplicationFormDialogProps {
   open: boolean;
@@ -97,6 +97,12 @@ export function ApplicationFormDialog({
     console.log('Form data:', data);
     setIsSubmitting(true);
 
+    // Show creating toast immediately
+    const creatingToast = toast({
+      title: 'Creating application...',
+      description: 'Please wait a moment',
+    });
+
     try {
       // Clean data: convert empty strings to undefined for optional fields
       const cleanedData = {
@@ -123,7 +129,8 @@ export function ApplicationFormDialog({
 
       if (result.error) {
         console.log('Error case - showing error toast');
-        // Show error toast
+        // Dismiss creating toast and show error
+        creatingToast.dismiss();
         toast({
           variant: 'destructive',
           title: 'Error',
@@ -131,7 +138,8 @@ export function ApplicationFormDialog({
         });
       } else {
         console.log('Success case - showing success toast');
-        // Show success toast
+        // Dismiss creating toast and show success
+        creatingToast.dismiss();
         toast({
           title: 'Success',
           description: 'Application created successfully',
@@ -193,6 +201,8 @@ export function ApplicationFormDialog({
       }
     } catch (error) {
       console.log('Caught exception:', error);
+      // Dismiss creating toast and show error
+      creatingToast.dismiss();
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -517,6 +527,9 @@ export function ApplicationFormDialog({
                 </Button>
               </DialogClose>
               <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
                 {isSubmitting ? 'Creating...' : 'Create Application'}
               </Button>
             </DialogFooter>

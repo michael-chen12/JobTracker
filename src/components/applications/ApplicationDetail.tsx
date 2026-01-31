@@ -344,6 +344,8 @@ export function ApplicationDetail({ application }: ApplicationDetailProps) {
         <NotesSection
           applicationId={application.id}
           notes={application.notes || []}
+          notesSummary={(application as any).notes_summary}
+          summarizedAt={(application as any).summarized_at}
         />
 
         {/* Documents Section */}

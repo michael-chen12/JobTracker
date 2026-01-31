@@ -207,7 +207,7 @@ export function DashboardClient({
               loading={loading}
             />
           ) : (
-            <KanbanBoard applications={applications} />
+            <KanbanBoard applications={applications} loading={loading} />
           )}
         </div>
 

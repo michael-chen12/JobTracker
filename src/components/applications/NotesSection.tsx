@@ -8,21 +8,33 @@ import { Textarea } from '@/components/ui/textarea';
 import { MessageSquare, Plus, Trash2 } from 'lucide-react';
 import { createNote, deleteNote } from '@/actions/applications';
 import { useToast } from '@/hooks/use-toast';
+import { NotesSummaryCard } from './NotesSummaryCard';
+import type { NotesSummary } from '@/types/ai';
 
 interface NotesSectionProps {
   applicationId: string;
   notes: ApplicationNote[];
+  notesSummary?: (NotesSummary & { notesCount?: number; latestNoteDate?: number }) | null;
+  summarizedAt?: string | null;
 }
 
 /**
  * NotesSection - Chronological notes display with add/delete functionality
+ * Now includes AI-powered notes summarization
  */
-export function NotesSection({ applicationId, notes }: NotesSectionProps) {
+export function NotesSection({
+  applicationId,
+  notes,
+  notesSummary = null,
+  summarizedAt = null
+}: NotesSectionProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isAdding, setIsAdding] = useState(false);
   const [newNoteContent, setNewNoteContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [localSummary, setLocalSummary] = useState(notesSummary);
+  const [localSummarizedAt, setLocalSummarizedAt] = useState(summarizedAt);
 
   const handleAddNote = async () => {
     if (!newNoteContent.trim()) {
@@ -165,7 +177,23 @@ export function NotesSection({ applicationId, notes }: NotesSectionProps) {
             </div>
           </div>
         )}
+      </div>
 
+      {/* AI Notes Summary - Shows OUTSIDE the main card */}
+      <NotesSummaryCard
+        applicationId={applicationId}
+        notes={notes}
+        notesSummary={localSummary}
+        summarizedAt={localSummarizedAt}
+        onSummaryComplete={(summary) => {
+          setLocalSummary(summary);
+          setLocalSummarizedAt(new Date().toISOString());
+        }}
+      />
+
+      {/* Notes List Card */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+        <div className="p-6">
         {/* Notes List */}
         {sortedNotes.length === 0 ? (
           <p className="text-gray-500 dark:text-gray-400 text-center py-8">
@@ -196,6 +224,7 @@ export function NotesSection({ applicationId, notes }: NotesSectionProps) {
             ))}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

@@ -17,9 +17,11 @@ import { ApplicationCard } from './ApplicationCard';
 import { updateApplication } from '@/actions/applications';
 import { useToast } from '@/hooks/use-toast';
 import { ApplicationStatus } from '@/types/application';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface KanbanBoardProps {
   applications: ApplicationRow[];
+  loading?: boolean;
 }
 
 // Column definitions matching the database enum
@@ -42,8 +44,9 @@ const COLUMNS = [
  * - Optimistic UI updates with rollback on error
  * - Limited to 50 cards per column for performance
  * - Touch-friendly for mobile devices
+ * - Loading skeletons while fetching data
  */
-export function KanbanBoard({ applications }: KanbanBoardProps) {
+export function KanbanBoard({ applications, loading = false }: KanbanBoardProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -145,6 +148,43 @@ export function KanbanBoard({ applications }: KanbanBoardProps) {
   const activeApplication = activeId
     ? applications.find((app) => app.id === activeId)
     : null;
+
+  // Show loading skeleton while fetching
+  if (loading) {
+    return (
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {COLUMNS.map((column) => (
+          <div
+            key={column.id}
+            className="flex-shrink-0 w-80 bg-gray-50 dark:bg-gray-900 rounded-lg p-4"
+          >
+            {/* Column header skeleton */}
+            <div className="flex items-center justify-between mb-4">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-5 w-8 rounded-full" />
+            </div>
+            {/* Card skeletons */}
+            <div className="space-y-3">
+              {Array.from({ length: 2 }).map((_, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3"
+                >
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                  <div className="space-y-1">
+                    <Skeleton className="h-3 w-1/2" />
+                    <Skeleton className="h-3 w-2/3" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <DndContext
