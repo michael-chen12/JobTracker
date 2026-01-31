@@ -152,6 +152,7 @@ export type Database = {
       }
       applications: {
         Row: {
+          analyzed_at: string | null
           applied_date: string | null
           company: string
           created_at: string
@@ -173,6 +174,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          analyzed_at?: string | null
           applied_date?: string | null
           company: string
           created_at?: string
@@ -194,6 +196,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          analyzed_at?: string | null
           applied_date?: string | null
           company?: string
           created_at?: string

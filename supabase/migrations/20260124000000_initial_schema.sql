@@ -1,6 +1,6 @@
 -- Migration: Initial Schema for Job Application Tracker
 -- Created: 2026-01-24
--- Description: PostgreSQL schema replacing Firebase Firestore
+-- Description: PostgreSQL schema for Job Application Tracker
 
 -- Note: Using gen_random_uuid() which is built-in to PostgreSQL (no extension needed)
 
@@ -300,7 +300,7 @@ CREATE TRIGGER update_milestones_updated_at BEFORE UPDATE ON milestones
 -- =============================================
 
 COMMENT ON TABLE applications IS 'Main job applications table with AI matching scores';
-COMMENT ON TABLE application_notes IS 'Notes for each application (replaces Firestore subcollection)';
+COMMENT ON TABLE application_notes IS 'Notes for each application';
 COMMENT ON TABLE application_documents IS 'Document references stored in Supabase Storage';
 COMMENT ON COLUMN applications.match_analysis IS 'JSONB: { matching_skills, missing_skills, strengths, concerns }';
 COMMENT ON COLUMN applications.salary_range IS 'JSONB: { min, max, currency }';
