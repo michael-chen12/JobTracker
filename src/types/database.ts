@@ -12,55 +12,54 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       ai_usage: {
         Row: {
-          cost_usd: number | null
+          cost_estimate: number | null
           created_at: string
+          error_message: string | null
           id: string
-          operation: string
+          input_sample: string | null
+          latency_ms: number | null
+          metadata: Json | null
+          model_version: string | null
+          operation_type: string
+          output_sample: string | null
+          success: boolean
+          timestamp: string
           tokens_used: number | null
           user_id: string
         }
         Insert: {
-          cost_usd?: number | null
+          cost_estimate?: number | null
           created_at?: string
+          error_message?: string | null
           id?: string
-          operation: string
+          input_sample?: string | null
+          latency_ms?: number | null
+          metadata?: Json | null
+          model_version?: string | null
+          operation_type: string
+          output_sample?: string | null
+          success: boolean
+          timestamp?: string
           tokens_used?: number | null
           user_id: string
         }
         Update: {
-          cost_usd?: number | null
+          cost_estimate?: number | null
           created_at?: string
+          error_message?: string | null
           id?: string
-          operation?: string
+          input_sample?: string | null
+          latency_ms?: number | null
+          metadata?: Json | null
+          model_version?: string | null
+          operation_type?: string
+          output_sample?: string | null
+          success?: boolean
+          timestamp?: string
           tokens_used?: number | null
           user_id?: string
         }
@@ -157,6 +156,8 @@ export type Database = {
           company: string
           created_at: string
           deadline: string | null
+          follow_up_suggestions: Json | null
+          followup_suggestions_at: string | null
           id: string
           job_description: string | null
           job_type: string | null
@@ -164,12 +165,14 @@ export type Database = {
           location: string | null
           match_analysis: Json | null
           match_score: number | null
+          notes_summary: Json | null
           position: string
           priority: string | null
           referral_name: string | null
           salary_range: Json | null
           source: string | null
           status: string
+          summarized_at: string | null
           updated_at: string
           user_id: string
         }
@@ -179,6 +182,8 @@ export type Database = {
           company: string
           created_at?: string
           deadline?: string | null
+          follow_up_suggestions?: Json | null
+          followup_suggestions_at?: string | null
           id?: string
           job_description?: string | null
           job_type?: string | null
@@ -186,12 +191,14 @@ export type Database = {
           location?: string | null
           match_analysis?: Json | null
           match_score?: number | null
+          notes_summary?: Json | null
           position: string
           priority?: string | null
           referral_name?: string | null
           salary_range?: Json | null
           source?: string | null
           status?: string
+          summarized_at?: string | null
           updated_at?: string
           user_id: string
         }
@@ -201,6 +208,8 @@ export type Database = {
           company?: string
           created_at?: string
           deadline?: string | null
+          follow_up_suggestions?: Json | null
+          followup_suggestions_at?: string | null
           id?: string
           job_description?: string | null
           job_type?: string | null
@@ -208,12 +217,14 @@ export type Database = {
           location?: string | null
           match_analysis?: Json | null
           match_score?: number | null
+          notes_summary?: Json | null
           position?: string
           priority?: string | null
           referral_name?: string | null
           salary_range?: Json | null
           source?: string | null
           status?: string
+          summarized_at?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -448,6 +459,47 @@ export type Database = {
           },
         ]
       }
+      resume_parsing_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          resume_url: string
+          started_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          resume_url: string
+          started_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          resume_url?: string
+          started_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resume_parsing_jobs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_education: {
         Row: {
           created_at: string
@@ -556,10 +608,13 @@ export type Database = {
           id: string
           linkedin_url: string | null
           location: string | null
+          parsed_resume_data: Json | null
           phone: string | null
           portfolio_url: string | null
           preferred_job_types: string[] | null
           preferred_locations: string[] | null
+          resume_parsed_at: string | null
+          resume_parsing_error: string | null
           resume_url: string | null
           salary_expectation: Json | null
           skills: string[] | null
@@ -573,10 +628,13 @@ export type Database = {
           id?: string
           linkedin_url?: string | null
           location?: string | null
+          parsed_resume_data?: Json | null
           phone?: string | null
           portfolio_url?: string | null
           preferred_job_types?: string[] | null
           preferred_locations?: string[] | null
+          resume_parsed_at?: string | null
+          resume_parsing_error?: string | null
           resume_url?: string | null
           salary_expectation?: Json | null
           skills?: string[] | null
@@ -590,10 +648,13 @@ export type Database = {
           id?: string
           linkedin_url?: string | null
           location?: string | null
+          parsed_resume_data?: Json | null
           phone?: string | null
           portfolio_url?: string | null
           preferred_job_types?: string[] | null
           preferred_locations?: string[] | null
+          resume_parsed_at?: string | null
+          resume_parsing_error?: string | null
           resume_url?: string | null
           salary_expectation?: Json | null
           skills?: string[] | null
@@ -777,9 +838,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

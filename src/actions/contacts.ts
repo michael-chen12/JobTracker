@@ -16,10 +16,13 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { revalidatePath } from 'next/cache';
 import {
   contactFormSchema,
   updateContactSchema,
   linkContactSchema,
+  contactInteractionSchema,
+  interactionFilterSchema,
 } from '@/schemas/contact';
 import type {
   ContactResult,
@@ -31,6 +34,13 @@ import type {
   ContactSortOptions,
   LinkContactToApplicationInput,
   ContactWithStats,
+  ContactInteractionResult,
+  ContactInteractionsListResult,
+  RelationshipStrengthQueryResult,
+  ContactWithDetailsResult,
+  CreateContactInteractionInput,
+  InteractionFilters,
+  RelationshipStrength,
 } from '@/types/contacts';
 
 // =============================================
@@ -637,6 +647,436 @@ export async function unlinkContactFromApplication(
     return { success: true };
   } catch (error) {
     console.error('Unexpected error in unlinkContactFromApplication:', error);
+    return { success: false, error: 'An unexpected error occurred' };
+  }
+}
+
+// =============================================
+// INTERACTION HISTORY TRACKING (Ticket #17)
+// =============================================
+
+/**
+ * Create a contact interaction
+ *
+ * Flow:
+ * 1. Authenticate user
+ * 2. Validate input with Zod schema
+ * 3. Verify user owns the contact (IDOR protection)
+ * 4. Insert interaction into contact_interactions table
+ * 5. Trigger auto-updates contacts.last_interaction_date
+ * 6. Return new interaction
+ *
+ * Security:
+ * - IDOR protection: verify contact ownership before creating interaction
+ * - Input validated (no future dates, 1000 char limit on notes)
+ * - RLS policy ensures contact belongs to user
+ */
+export async function createContactInteraction(
+  input: CreateContactInteractionInput
+): Promise<ContactInteractionResult> {
+  try {
+    // 1. Authenticate
+    const { supabase, dbUser, error: authError } = await authenticateUser();
+    if (authError || !dbUser) {
+      return { success: false, error: authError || 'Authentication failed' };
+    }
+
+    // 2. Validate input with Zod
+    const validation = contactInteractionSchema.safeParse(input);
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return {
+        success: false,
+        error: firstError?.message || 'Validation failed',
+      };
+    }
+
+    const validatedData = validation.data;
+
+    // 3. Verify ownership of contact (IDOR protection)
+    const { data: contact, error: contactError } = await supabase
+      .from('contacts')
+      .select('id, user_id')
+      .eq('id', validatedData.contactId)
+      .eq('user_id', dbUser.id)
+      .single();
+
+    if (contactError || !contact) {
+      return { success: false, error: 'Contact not found or access denied' };
+    }
+
+    // 4. Insert interaction (database trigger handles last_interaction_date update)
+    const { data: interaction, error: insertError } = await supabase
+      .from('contact_interactions')
+      .insert({
+        contact_id: validatedData.contactId,
+        interaction_type: validatedData.interactionType,
+        interaction_date: validatedData.interactionDate,
+        notes: validatedData.notes || null,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error(
+        'Interaction creation failed:',
+        redactPII({
+          contact_id: validatedData.contactId,
+          user_id: dbUser.id,
+          error: insertError.message,
+        })
+      );
+      return { success: false, error: 'Failed to create interaction' };
+    }
+
+    // 5. Revalidate contact detail pages
+    revalidatePath('/dashboard/contacts');
+
+    return { success: true, interaction };
+  } catch (error) {
+    console.error('Unexpected error in createContactInteraction:', error);
+    return { success: false, error: 'An unexpected error occurred' };
+  }
+}
+
+/**
+ * Get contact interactions with optional filtering
+ *
+ * Flow:
+ * 1. Authenticate user
+ * 2. Verify ownership of contact
+ * 3. Apply filters (types, date range)
+ * 4. Order by interaction_date DESC (newest first)
+ * 5. Return interactions
+ *
+ * Performance:
+ * - Uses idx_contact_interactions_contact_date composite index
+ * - Type filter uses idx_contact_interactions_type
+ */
+export async function getContactInteractions(
+  contactId: string,
+  filters?: InteractionFilters
+): Promise<ContactInteractionsListResult> {
+  try {
+    // 1. Authenticate
+    const { supabase, dbUser, error: authError } = await authenticateUser();
+    if (authError || !dbUser) {
+      return { success: false, error: authError || 'Authentication failed' };
+    }
+
+    // 2. Verify ownership
+    const { data: contact, error: contactError } = await supabase
+      .from('contacts')
+      .select('id, user_id')
+      .eq('id', contactId)
+      .eq('user_id', dbUser.id)
+      .single();
+
+    if (contactError || !contact) {
+      return { success: false, error: 'Contact not found or access denied' };
+    }
+
+    // 3. Validate filters
+    const validation = interactionFilterSchema.safeParse(filters || {});
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return {
+        success: false,
+        error: firstError?.message || 'Invalid filters',
+      };
+    }
+
+    const validatedFilters = validation.data;
+
+    // 4. Build query
+    let query = supabase
+      .from('contact_interactions')
+      .select('*')
+      .eq('contact_id', contactId);
+
+    // Apply type filter (IN clause)
+    if (validatedFilters.types && validatedFilters.types.length > 0) {
+      query = query.in('interaction_type', validatedFilters.types);
+    }
+
+    // Apply date range filters
+    if (validatedFilters.dateFrom) {
+      query = query.gte('interaction_date', validatedFilters.dateFrom);
+    }
+
+    if (validatedFilters.dateTo) {
+      query = query.lte('interaction_date', validatedFilters.dateTo);
+    }
+
+    // 5. Order by date DESC (newest first)
+    query = query.order('interaction_date', { ascending: false });
+
+    // 6. Execute query
+    const { data: interactions, error: queryError } = await query;
+
+    if (queryError) {
+      console.error(
+        'Interaction fetch failed:',
+        redactPII({
+          contact_id: contactId,
+          user_id: dbUser.id,
+          error: queryError.message,
+        })
+      );
+      return { success: false, error: 'Failed to fetch interactions' };
+    }
+
+    return { success: true, interactions: interactions || [] };
+  } catch (error) {
+    console.error('Unexpected error in getContactInteractions:', error);
+    return { success: false, error: 'An unexpected error occurred' };
+  }
+}
+
+/**
+ * Delete a contact interaction
+ *
+ * Flow:
+ * 1. Authenticate user
+ * 2. Verify nested ownership (user → contact → interaction)
+ * 3. Delete interaction
+ * 4. Trigger recalculates last_interaction_date
+ * 5. Return success
+ *
+ * Security:
+ * - Nested ownership verification prevents IDOR attacks
+ * - Can't delete other users' interactions
+ */
+export async function deleteContactInteraction(
+  interactionId: string,
+  contactId: string
+): Promise<DeleteContactResult> {
+  try {
+    // 1. Authenticate
+    const { supabase, dbUser, error: authError } = await authenticateUser();
+    if (authError || !dbUser) {
+      return { success: false, error: authError || 'Authentication failed' };
+    }
+
+    // 2. Verify nested ownership (user → contact → interaction)
+    const { data: contact, error: contactError } = await supabase
+      .from('contacts')
+      .select('id, user_id')
+      .eq('id', contactId)
+      .eq('user_id', dbUser.id)
+      .single();
+
+    if (contactError || !contact) {
+      return { success: false, error: 'Contact not found or access denied' };
+    }
+
+    // Verify interaction belongs to this contact
+    const { data: interaction, error: interactionError } = await supabase
+      .from('contact_interactions')
+      .select('id, contact_id')
+      .eq('id', interactionId)
+      .eq('contact_id', contactId)
+      .single();
+
+    if (interactionError || !interaction) {
+      return {
+        success: false,
+        error: 'Interaction not found or access denied',
+      };
+    }
+
+    // 3. Delete interaction (trigger handles last_interaction_date recalc)
+    const { error: deleteError } = await supabase
+      .from('contact_interactions')
+      .delete()
+      .eq('id', interactionId)
+      .eq('contact_id', contactId);
+
+    if (deleteError) {
+      console.error(
+        'Interaction deletion failed:',
+        redactPII({
+          interaction_id: interactionId,
+          contact_id: contactId,
+          user_id: dbUser.id,
+          error: deleteError.message,
+        })
+      );
+      return { success: false, error: 'Failed to delete interaction' };
+    }
+
+    // 4. Revalidate contact detail pages
+    revalidatePath('/dashboard/contacts');
+
+    return { success: true };
+  } catch (error) {
+    console.error('Unexpected error in deleteContactInteraction:', error);
+    return { success: false, error: 'An unexpected error occurred' };
+  }
+}
+
+/**
+ * Calculate relationship strength based on recent interactions
+ *
+ * Formula:
+ * - Cold: 0 interactions in last 30 days
+ * - Warm: 1-2 interactions in last 30 days
+ * - Strong: 3+ interactions in last 30 days
+ *
+ * Flow:
+ * 1. Authenticate user
+ * 2. Verify ownership of contact
+ * 3. Count interactions in last 30 days
+ * 4. Get last_interaction_date from contact
+ * 5. Calculate strength category
+ * 6. Return result
+ */
+export async function calculateRelationshipStrength(
+  contactId: string
+): Promise<RelationshipStrengthQueryResult> {
+  try {
+    // 1. Authenticate
+    const { supabase, dbUser, error: authError } = await authenticateUser();
+    if (authError || !dbUser) {
+      return { success: false, error: authError || 'Authentication failed' };
+    }
+
+    // 2. Verify ownership and get last_interaction_date
+    const { data: contact, error: contactError } = await supabase
+      .from('contacts')
+      .select('id, user_id, last_interaction_date')
+      .eq('id', contactId)
+      .eq('user_id', dbUser.id)
+      .single();
+
+    if (contactError || !contact) {
+      return { success: false, error: 'Contact not found or access denied' };
+    }
+
+    // 3. Count interactions in last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const { count, error: countError } = await supabase
+      .from('contact_interactions')
+      .select('*', { count: 'exact', head: true })
+      .eq('contact_id', contactId)
+      .gte('interaction_date', thirtyDaysAgo.toISOString());
+
+    if (countError) {
+      console.error(
+        'Interaction count failed:',
+        redactPII({
+          contact_id: contactId,
+          user_id: dbUser.id,
+          error: countError.message,
+        })
+      );
+      return { success: false, error: 'Failed to calculate strength' };
+    }
+
+    const recentInteractionCount = count || 0;
+
+    // 4. Calculate strength category
+    let strength: RelationshipStrength = 'cold';
+    if (recentInteractionCount >= 3) {
+      strength = 'strong';
+    } else if (recentInteractionCount >= 1) {
+      strength = 'warm';
+    }
+
+    return {
+      success: true,
+      data: {
+        strength,
+        recentInteractionCount,
+        lastInteractionDate: contact.last_interaction_date || undefined,
+      },
+    };
+  } catch (error) {
+    console.error('Unexpected error in calculateRelationshipStrength:', error);
+    return { success: false, error: 'An unexpected error occurred' };
+  }
+}
+
+/**
+ * Get contact with full details (interactions, stats, relationship strength)
+ *
+ * Flow:
+ * 1. Authenticate user
+ * 2. Fetch contact with ownership verification
+ * 3. Fetch all interactions
+ * 4. Calculate relationship strength
+ * 5. Count total interactions
+ * 6. Return ContactWithDetails
+ *
+ * Used by: Contact detail page (/dashboard/contacts/[id])
+ */
+export async function getContactWithDetails(
+  contactId: string
+): Promise<ContactWithDetailsResult> {
+  try {
+    // 1. Authenticate
+    const { supabase, dbUser, error: authError } = await authenticateUser();
+    if (authError || !dbUser) {
+      return { success: false, error: authError || 'Authentication failed' };
+    }
+
+    // 2. Fetch contact with ownership verification
+    const { data: contact, error: contactError } = await supabase
+      .from('contacts')
+      .select('*')
+      .eq('id', contactId)
+      .eq('user_id', dbUser.id)
+      .single();
+
+    if (contactError || !contact) {
+      return { success: false, error: 'Contact not found or access denied' };
+    }
+
+    // 3. Fetch all interactions (ordered by date DESC)
+    const { data: interactions, error: interactionsError } = await supabase
+      .from('contact_interactions')
+      .select('*')
+      .eq('contact_id', contactId)
+      .order('interaction_date', { ascending: false });
+
+    if (interactionsError) {
+      console.error(
+        'Interactions fetch failed:',
+        redactPII({
+          contact_id: contactId,
+          user_id: dbUser.id,
+          error: interactionsError.message,
+        })
+      );
+      return { success: false, error: 'Failed to fetch interactions' };
+    }
+
+    // 4. Calculate relationship strength
+    const strengthResult = await calculateRelationshipStrength(contactId);
+    if (!strengthResult.success || !strengthResult.data) {
+      return {
+        success: false,
+        error: strengthResult.error || 'Failed to calculate strength',
+      };
+    }
+
+    // 5. Count total interactions
+    const totalInteractionCount = interactions?.length || 0;
+
+    // 6. Return full contact details
+    return {
+      success: true,
+      data: {
+        ...contact,
+        interactions: interactions || [],
+        relationshipStrength: strengthResult.data,
+        totalInteractionCount,
+      },
+    };
+  } catch (error) {
+    console.error('Unexpected error in getContactWithDetails:', error);
     return { success: false, error: 'An unexpected error occurred' };
   }
 }

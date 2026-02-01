@@ -209,6 +209,8 @@ export const linkContactSchema = z.object({
 
 /**
  * Contact interaction schema (for logging emails, calls, meetings)
+ *
+ * SECURITY: Validates interaction date to prevent future dates
  */
 export const contactInteractionSchema = z.object({
   contactId: z.string().uuid('Invalid contact ID'),
@@ -225,13 +227,46 @@ export const contactInteractionSchema = z.object({
     .string()
     .datetime('Invalid date format. Use ISO 8601 format')
     .optional()
-    .default(() => new Date().toISOString()),
+    .default(() => new Date().toISOString())
+    .refine(
+      (date) => {
+        // Prevent future dates (max = today)
+        const interactionDate = new Date(date);
+        const now = new Date();
+        return interactionDate <= now;
+      },
+      {
+        message: 'Interaction date cannot be in the future',
+      }
+    ),
 
   notes: z
     .string()
     .max(1000, 'Notes must be 1000 characters or less')
     .optional()
     .transform((val) => (val ? val.trim() : '')),
+});
+
+/**
+ * Interaction filter schema (for filtering timeline)
+ */
+export const interactionFilterSchema = z.object({
+  types: z
+    .array(
+      z.enum(['email', 'call', 'meeting', 'linkedin_message', 'other'])
+    )
+    .optional()
+    .default([]),
+
+  dateFrom: z
+    .string()
+    .datetime('Invalid date format. Use ISO 8601 format')
+    .optional(),
+
+  dateTo: z
+    .string()
+    .datetime('Invalid date format. Use ISO 8601 format')
+    .optional(),
 });
 
 /**
@@ -262,3 +297,4 @@ export type UpdateContactData = z.infer<typeof updateContactSchema>;
 export type LinkContactData = z.infer<typeof linkContactSchema>;
 export type ContactInteractionData = z.infer<typeof contactInteractionSchema>;
 export type ContactSearchData = z.infer<typeof contactSearchSchema>;
+export type InteractionFilterData = z.infer<typeof interactionFilterSchema>;

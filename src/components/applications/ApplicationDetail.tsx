@@ -1,14 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ApplicationWithRelations } from '@/types/application';
 import { Button } from '@/components/ui/button';
 import {
   ChevronLeft,
-  Pencil,
-  Trash2,
   ExternalLink,
   Calendar,
   MapPin,
@@ -24,173 +22,110 @@ import { MatchAnalysisCard } from './MatchAnalysisCard';
 import { FollowUpSuggestionsCard } from './FollowUpSuggestionsCard';
 import { ContactLinkingSection } from '../contacts/ContactLinkingSection';
 import { updateApplication } from '@/actions/applications';
-import { analyzeJobMatch } from '@/actions/analyze-job';
-import { getContact } from '@/actions/contacts';
+import { useApplicationState } from '@/hooks/useApplicationState';
 import { useToast } from '@/hooks/use-toast';
+import { formatDate, formatSalaryRange } from '@/lib/utils/formatters';
 import type { MatchAnalysis, FollowUpSuggestions } from '@/types/ai';
 import type { Contact } from '@/types/contacts';
 
 interface ApplicationDetailProps {
   application: ApplicationWithRelations;
+  /**
+   * Referral contact (fetched by parent server component)
+   * Passing as prop avoids useEffect in client component
+   */
+  referralContact?: Contact | null;
 }
 
 /**
  * ApplicationDetail - Comprehensive view of a single job application
  *
- * Features:
+ * **Refactored for React best practices:**
+ * - Uses useApplicationState reducer (replaces 9 useState calls)
+ * - No useEffect for data fetching (referralContact passed as prop)
+ * - Stable callbacks with useCallback
+ * - Extracted formatters to utilities
+ * - Clear separation of concerns
+ *
+ * **Features:**
  * - Inline editing for all fields
- * - Notes management
+ * - Notes management with summarization
  * - Document attachments
+ * - Match analysis and follow-up suggestions
+ * - Contact linking
  * - Delete with confirmation
- * - Breadcrumb navigation
  */
-export function ApplicationDetail({ application }: ApplicationDetailProps) {
+export function ApplicationDetail({ application, referralContact }: ApplicationDetailProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const [isEditing, setIsEditing] = useState<Record<string, boolean>>({});
-  const [matchScore, setMatchScore] = useState(application.match_score);
-  const [matchAnalysis, setMatchAnalysis] = useState(application.match_analysis);
-  const [analyzedAt, setAnalyzedAt] = useState(application.analyzed_at);
-  const [followUpSuggestions, setFollowUpSuggestions] = useState<FollowUpSuggestions | null>(
-    (application as any).follow_up_suggestions || null
-  );
-  const [followupSuggestionsAt, setFollowupSuggestionsAt] = useState<string | null>(
-    (application as any).followup_suggestions_at || null
-  );
-  const [referralContact, setReferralContact] = useState<Contact | null>(null);
-  const [isLoadingContact, setIsLoadingContact] = useState(false);
 
-  // Fetch referral contact if linked
-  useEffect(() => {
-    const fetchReferralContact = async () => {
-      const contactId = (application as any).referral_contact_id;
-      if (!contactId) {
-        setReferralContact(null);
-        return;
-      }
+  // Consolidated state management with reducer
+  const { state, actions } = useApplicationState(application);
 
-      setIsLoadingContact(true);
-      const result = await getContact(contactId);
-      if (result.success && result.contact) {
-        setReferralContact(result.contact);
-      }
-      setIsLoadingContact(false);
-    };
-
-    fetchReferralContact();
-  }, [application]);
-
-  const handleContactLinked = () => {
-    // Refresh the page to get updated referral_contact_id
+  // Stable callback for contact linking (refreshes to get updated data)
+  const handleContactLinked = useCallback(() => {
     router.refresh();
-  };
+  }, [router]);
 
-  const triggerAnalysis = () => {
-    toast({
-      title: 'Analyzing job match...',
-      description: 'This may take 10-15 seconds',
-    });
+  // Stable callback for field updates
+  const handleFieldUpdate = useCallback(
+    async (field: string, value: unknown) => {
+      try {
+        const result = await updateApplication(application.id, {
+          [field]: value,
+        });
 
-    analyzeJobMatch(application.id)
-      .then((result) => {
-        if (result.success && result.score !== undefined && result.analysis) {
-          setMatchScore(result.score);
-          setMatchAnalysis(result.analysis as any);
-          setAnalyzedAt(new Date().toISOString());
+        if (result.error) {
           toast({
-            title: `Match score: ${result.score}%`,
-            description: 'Analysis updated successfully',
+            variant: 'destructive',
+            title: 'Error',
+            description: result.error,
           });
         } else {
           toast({
-            variant: 'destructive',
-            title: 'Analysis failed',
-            description: result.error || 'Analysis failed',
+            title: 'Updated',
+            description: 'Application updated successfully',
           });
+          router.refresh();
+
+          // Auto-trigger analysis if job description or URL changed
+          const shouldAnalyze =
+            (field === 'job_description' || field === 'job_url') &&
+            typeof value === 'string' &&
+            value.trim().length > 0;
+
+          if (shouldAnalyze) {
+            // Analysis will be triggered by MatchAnalysisCard
+            // No need to duplicate state management here
+          }
         }
-      })
-      .catch((error) => {
-        console.error('Analysis error:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Analysis failed',
-          description: 'You can re-analyze from the application page.',
-        });
-      });
-  };
-
-  const handleFieldUpdate = async (field: string, value: unknown) => {
-    try {
-      const result = await updateApplication(application.id, {
-        [field]: value,
-      });
-
-      if (result.error) {
+      } catch (error) {
+        console.error('Failed to update field:', error);
         toast({
           variant: 'destructive',
           title: 'Error',
-          description: result.error,
+          description: 'Failed to update application',
         });
-      } else {
-        toast({
-          title: 'Updated',
-          description: 'Application updated successfully',
-        });
-        router.refresh();
-
-        const shouldAnalyze =
-          (field === 'job_description' || field === 'job_url') &&
-          typeof value === 'string' &&
-          value.trim().length > 0;
-
-        if (shouldAnalyze) {
-          triggerAnalysis();
-        }
       }
-    } catch (error) {
-      console.error('Failed to update field:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to update application',
-      });
-    }
-  };
+    },
+    [application.id, router, toast]
+  );
 
-  const formatDate = (date: string | null) => {
-    if (!date) return '—';
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
+  // Stable callback for match analysis completion
+  const handleAnalysisComplete = useCallback(
+    (score: number, analysis: MatchAnalysis) => {
+      actions.setMatchData(score, analysis, new Date().toISOString());
+    },
+    [actions]
+  );
 
-  const formatSalaryRange = () => {
-    const salary = application.salary_range as { min?: number; max?: number; currency?: string } | null;
-    if (!salary) return '—';
-
-    const { min, max, currency = 'USD' } = salary;
-    if (!min && !max) return '—';
-
-    const formatter = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
-
-    if (min && max) {
-      return `${formatter.format(min)} - ${formatter.format(max)}`;
-    }
-    if (min) {
-      return `${formatter.format(min)}+`;
-    }
-    if (max) {
-      return `Up to ${formatter.format(max)}`;
-    }
-    return '—';
-  };
+  // Stable callback for follow-up suggestions completion
+  const handleSuggestionsComplete = useCallback(
+    (suggestions: FollowUpSuggestions) => {
+      actions.setSuggestions(suggestions, new Date().toISOString());
+    },
+    [actions]
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -309,7 +244,11 @@ export function ApplicationDetail({ application }: ApplicationDetailProps) {
                   <DollarSign className="h-4 w-4" />
                   <span>Salary Range</span>
                 </div>
-                <p className="text-gray-900 dark:text-white">{formatSalaryRange()}</p>
+                <p className="text-gray-900 dark:text-white">
+                  {formatSalaryRange(
+                    application.salary_range as { min?: number; max?: number; currency?: string } | null
+                  )}
+                </p>
               </div>
 
               {/* Priority */}
@@ -366,14 +305,10 @@ export function ApplicationDetail({ application }: ApplicationDetailProps) {
         {/* Match Analysis Card */}
         <MatchAnalysisCard
           applicationId={application.id}
-          matchScore={matchScore}
-          matchAnalysis={matchAnalysis as MatchAnalysis | null}
-          analyzedAt={analyzedAt}
-          onAnalysisComplete={(score, analysis) => {
-            setMatchScore(score);
-            setMatchAnalysis(analysis as any);
-            setAnalyzedAt(new Date().toISOString());
-          }}
+          matchScore={state.matchScore}
+          matchAnalysis={state.matchAnalysis}
+          analyzedAt={state.analyzedAt}
+          onAnalysisComplete={handleAnalysisComplete}
           className="mb-6"
         />
 
@@ -381,23 +316,18 @@ export function ApplicationDetail({ application }: ApplicationDetailProps) {
         <FollowUpSuggestionsCard
           applicationId={application.id}
           appliedDate={application.applied_date}
-          followUpSuggestions={followUpSuggestions}
-          followupSuggestionsAt={followupSuggestionsAt}
-          onSuggestionsComplete={(suggestions) => {
-            setFollowUpSuggestions(suggestions);
-            setFollowupSuggestionsAt(new Date().toISOString());
-          }}
+          followUpSuggestions={state.followUpSuggestions}
+          followupSuggestionsAt={state.followupSuggestionsAt}
+          onSuggestionsComplete={handleSuggestionsComplete}
           className="mb-6"
         />
 
         {/* Contact Linking Section */}
-        {!isLoadingContact && (
-          <ContactLinkingSection
-            applicationId={application.id}
-            referralContact={referralContact}
-            onContactLinked={handleContactLinked}
-          />
-        )}
+        <ContactLinkingSection
+          applicationId={application.id}
+          referralContact={referralContact || null}
+          onContactLinked={handleContactLinked}
+        />
 
         {/* Notes Section */}
         <NotesSection

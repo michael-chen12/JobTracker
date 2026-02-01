@@ -11,6 +11,14 @@ import { Input } from '@/components/ui/input';
 import { Plus, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+/**
+ * ContactsList - List view with search and filtering
+ *
+ * **Optimized for performance:**
+ * - Stable callbacks with useCallback (prevents ContactCard re-renders)
+ * - Memoized child components (ContactCard)
+ * - Efficient state management
+ */
 export function ContactsList() {
   const [contacts, setContacts] = useState<ContactWithStats[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,14 +49,33 @@ export function ContactsList() {
     loadContacts();
   }, [loadContacts]);
 
-  const handleContactCreated = () => {
+  // Stable callbacks for ContactCard (prevents unnecessary re-renders)
+  const handleContactCreated = useCallback(() => {
     setIsFormOpen(false);
     loadContacts();
     toast({
       title: 'Success',
       description: 'Contact created successfully',
     });
-  };
+  }, [loadContacts, toast]);
+
+  const handleOpenForm = useCallback(() => {
+    setIsFormOpen(true);
+  }, []);
+
+  const handleCloseForm = useCallback(() => {
+    setIsFormOpen(false);
+  }, []);
+
+  // Stable callback passed to each ContactCard
+  // All cards share the same function reference (better performance)
+  const handleUpdate = useCallback(() => {
+    loadContacts();
+  }, [loadContacts]);
+
+  const handleDelete = useCallback(() => {
+    loadContacts();
+  }, [loadContacts]);
 
   if (isLoading) {
     return <div className="text-center py-8">Loading contacts...</div>;
@@ -57,10 +84,10 @@ export function ContactsList() {
   if (contacts.length === 0 && !searchQuery) {
     return (
       <>
-        <EmptyContactsState onAddContact={() => setIsFormOpen(true)} />
+        <EmptyContactsState onAddContact={handleOpenForm} />
         <ContactFormDialog
           open={isFormOpen}
-          onOpenChange={setIsFormOpen}
+          onOpenChange={handleCloseForm}
           onSuccess={handleContactCreated}
         />
       </>
@@ -80,7 +107,7 @@ export function ContactsList() {
             className="pl-10"
           />
         </div>
-        <Button onClick={() => setIsFormOpen(true)}>
+        <Button onClick={handleOpenForm}>
           <Plus className="h-4 w-4 mr-2" />
           Add Contact
         </Button>
@@ -97,8 +124,8 @@ export function ContactsList() {
             <ContactCard
               key={contact.id}
               contact={contact}
-              onUpdate={loadContacts}
-              onDelete={loadContacts}
+              onUpdate={handleUpdate}
+              onDelete={handleDelete}
             />
           ))}
         </div>
@@ -106,7 +133,7 @@ export function ContactsList() {
 
       <ContactFormDialog
         open={isFormOpen}
-        onOpenChange={setIsFormOpen}
+        onOpenChange={handleCloseForm}
         onSuccess={handleContactCreated}
       />
     </div>

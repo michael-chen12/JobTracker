@@ -56,6 +56,8 @@ export interface ContactWithStats extends Contact {
   interaction_count: number;
   /** Number of applications linked to this contact as referral */
   applications_count: number;
+  /** Relationship strength (optional - fetched separately for performance) */
+  relationship_strength?: RelationshipStrength;
 }
 
 /**
@@ -64,6 +66,52 @@ export interface ContactWithStats extends Contact {
  */
 export interface ContactWithInteractions extends Contact {
   interactions: ContactInteraction[];
+}
+
+/**
+ * Filter options for interaction history queries
+ */
+export interface InteractionFilters {
+  /** Filter by interaction types (e.g., only show emails and calls) */
+  types?: InteractionType[];
+  /** Filter by start date (inclusive) - ISO 8601 format */
+  dateFrom?: string;
+  /** Filter by end date (inclusive) - ISO 8601 format */
+  dateTo?: string;
+}
+
+/**
+ * Relationship strength categories based on recent interaction frequency
+ */
+export type RelationshipStrength = 'cold' | 'warm' | 'strong';
+
+/**
+ * Relationship strength calculation result
+ */
+export interface RelationshipStrengthResult {
+  /** Calculated strength category */
+  strength: RelationshipStrength;
+  /** Number of interactions in last 30 days */
+  recentInteractionCount: number;
+  /** Date of most recent interaction (null if never contacted) */
+  lastInteractionDate?: string;
+}
+
+/**
+ * Contact with full details for detail page
+ * Includes interactions, relationship metrics, and statistics
+ */
+export interface ContactWithDetails extends Omit<Contact, 'tags' | 'last_interaction_date'> {
+  /** Full interaction history */
+  interactions: ContactInteraction[];
+  /** Relationship strength metrics */
+  relationshipStrength: RelationshipStrengthResult;
+  /** Total number of interactions (all time) */
+  totalInteractionCount: number;
+  /** Tags for categorization (from migration 20260202) */
+  tags?: string[];
+  /** Last interaction date (from migration 20260202) */
+  last_interaction_date?: string | null;
 }
 
 // =============================================
@@ -143,6 +191,33 @@ export interface DeleteContactResult {
 export interface ContactInteractionResult {
   success: boolean;
   interaction?: ContactInteraction;
+  error?: string;
+}
+
+/**
+ * Result type for interaction list operations
+ */
+export interface ContactInteractionsListResult {
+  success: boolean;
+  interactions?: ContactInteraction[];
+  error?: string;
+}
+
+/**
+ * Result type for relationship strength calculation
+ */
+export interface RelationshipStrengthQueryResult {
+  success: boolean;
+  data?: RelationshipStrengthResult;
+  error?: string;
+}
+
+/**
+ * Result type for contact with details operation
+ */
+export interface ContactWithDetailsResult {
+  success: boolean;
+  data?: ContactWithDetails;
   error?: string;
 }
 

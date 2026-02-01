@@ -1,20 +1,53 @@
 'use client';
 
+import React, { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ApplicationRow } from './columns';
 import { StatusBadge } from './StatusBadge';
 import { MatchScoreBadge } from './MatchScoreBadge';
 import { Calendar, MapPin } from 'lucide-react';
-
 interface ApplicationCardProps {
   application: ApplicationRow;
 }
 
 /**
- * ApplicationCard - Card view for kanban board
+ * Custom comparison for ApplicationCard
+ * Compares by ID and updated_at to prevent unnecessary re-renders
  */
-export function ApplicationCard({ application }: ApplicationCardProps) {
+function compareApplicationCards(
+  prev: ApplicationCardProps,
+  next: ApplicationCardProps
+): boolean {
+  return (
+    prev.application.id === next.application.id &&
+    prev.application.updated_at === next.application.updated_at
+  );
+}
+
+/**
+ * ApplicationCard - Card view for kanban board
+ *
+ * **Optimized for list rendering:**
+ * - React.memo with custom comparison (only re-renders when application data changes)
+ * - useCallback for stable event handlers
+ * - Extracted formatDate to inline helper (simple enough to keep local)
+ *
+ * Used in:
+ * - Kanban board columns
+ * - Application list views
+ */
+function ApplicationCardComponent({ application }: ApplicationCardProps) {
   const router = useRouter();
+
+  // Stable navigation callback
+  const handleClick = useCallback(() => {
+    router.push(`/dashboard/applications/${application.id}`);
+  }, [router, application.id]);
+
+  // Stable stop propagation callback for match score badge
+  const handleBadgeClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
 
   const formatDate = (date: string | null) => {
     if (!date) return null;
@@ -26,7 +59,7 @@ export function ApplicationCard({ application }: ApplicationCardProps) {
 
   return (
     <div
-      onClick={() => router.push(`/dashboard/applications/${application.id}`)}
+      onClick={handleClick}
       className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow cursor-pointer"
     >
       {/* Company & Position */}
@@ -39,7 +72,7 @@ export function ApplicationCard({ application }: ApplicationCardProps) {
 
       {/* Match Score Badge */}
       {(application.match_score !== null || application.job_description || application.job_url) && (
-        <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3" onClick={handleBadgeClick}>
           <MatchScoreBadge
             applicationId={application.id}
             matchScore={application.match_score}
@@ -65,3 +98,9 @@ export function ApplicationCard({ application }: ApplicationCardProps) {
     </div>
   );
 }
+
+/**
+ * Memoized ApplicationCard - only re-renders when application data changes
+ * Uses custom comparison function specific to ApplicationRow
+ */
+export const ApplicationCard = React.memo(ApplicationCardComponent, compareApplicationCards);
