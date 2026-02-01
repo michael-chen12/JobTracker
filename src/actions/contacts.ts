@@ -15,8 +15,8 @@
  * - IDOR protection for referral linking
  */
 
-import { createClient } from '@/lib/supabase/server';
-import { revalidatePath } from 'next/cache';
+import { createAdminClient, createClient } from '@/lib/supabase/server';
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import {
   contactFormSchema,
   updateContactSchema,
@@ -37,11 +37,15 @@ import type {
   ContactInteractionResult,
   ContactInteractionsListResult,
   RelationshipStrengthQueryResult,
+  ContactWithDetails,
   ContactWithDetailsResult,
   CreateContactInteractionInput,
   InteractionFilters,
   RelationshipStrength,
 } from '@/types/contacts';
+
+const CONTACTS_CACHE_TAG = 'contacts';
+const CONTACTS_CACHE_REVALIDATE = 30;
 
 // =============================================
 // SECURITY: PII REDACTION UTILITY
@@ -118,6 +122,205 @@ async function authenticateUser() {
   return { supabase, user, dbUser, error: null };
 }
 
+const getContactsCached = unstable_cache(
+  async (
+    dbUserId: string,
+    filters?: ContactFilters,
+    sortOptions?: ContactSortOptions,
+    limit = 50,
+    offset = 0
+  ): Promise<ContactsListResult> => {
+    const supabase = createAdminClient();
+
+    // 2. Build base query (RLS handles ownership automatically)
+    let query = supabase
+      .from('contacts')
+      .select(
+        `
+        *,
+        interaction_count:contact_interactions(count),
+        applications_count:applications!applications_referral_contact_id_fkey(count)
+      `,
+        { count: 'exact' }
+      )
+      .eq('user_id', dbUserId);
+
+    // 3. Apply full-text search if provided
+    if (filters?.search && filters.search.trim().length > 0) {
+      const searchTerm = filters.search.trim();
+      // Use ilike for case-insensitive search across multiple fields
+      query = query.or(
+        `name.ilike.%${searchTerm}%,` +
+          `company.ilike.%${searchTerm}%,` +
+          `position.ilike.%${searchTerm}%,` +
+          `notes.ilike.%${searchTerm}%`
+      );
+    }
+
+    // 4. Apply filters
+    if (filters?.contactType) {
+      query = query.eq('contact_type', filters.contactType);
+    }
+
+    if (filters?.company) {
+      query = query.eq('company', filters.company);
+    }
+
+    if (filters?.tags && filters.tags.length > 0) {
+      // Match any of the provided tags (array overlap)
+      query = query.overlaps('tags', filters.tags);
+    }
+
+    // 5. Apply sorting
+    const sortField = sortOptions?.field || 'name';
+    const sortOrder = sortOptions?.order || 'asc';
+
+    if (sortField === 'last_interaction_date') {
+      // NULLS LAST for interaction date (contacts without interactions appear last)
+      query = query.order(sortField, {
+        ascending: sortOrder === 'asc',
+        nullsFirst: false,
+      });
+    } else {
+      query = query.order(sortField, { ascending: sortOrder === 'asc' });
+    }
+
+    // 6. Apply pagination
+    query = query.range(offset, offset + limit - 1);
+
+    // 7. Execute query
+    const { data: contacts, error: queryError, count } = await query;
+
+    if (queryError) {
+      console.error(
+        'Contact fetch failed:',
+        redactPII({ user_id: dbUserId, error: queryError.message })
+      );
+      return { success: false, error: 'Failed to fetch contacts' };
+    }
+
+    // Transform to include stats (handle Supabase's count array format)
+    const contactsWithStats: ContactWithStats[] = (contacts || []).map(
+      (contact) => ({
+        ...contact,
+        interaction_count: Array.isArray(contact.interaction_count)
+          ? contact.interaction_count[0]?.count || 0
+          : 0,
+        applications_count: Array.isArray(contact.applications_count)
+          ? contact.applications_count[0]?.count || 0
+          : 0,
+      })
+    );
+
+    return {
+      success: true,
+      contacts: contactsWithStats,
+      total: count || 0,
+    };
+  },
+  ['contacts-list'],
+  { revalidate: CONTACTS_CACHE_REVALIDATE, tags: [CONTACTS_CACHE_TAG] }
+);
+
+const getContactWithDetailsCached = unstable_cache(
+  async (
+    dbUserId: string,
+    contactId: string
+  ): Promise<ContactWithDetailsResult> => {
+    const supabase = createAdminClient();
+
+    // 2. Fetch contact with ownership verification
+    const { data: contact, error: contactError } = await supabase
+      .from('contacts')
+      .select('*')
+      .eq('id', contactId)
+      .eq('user_id', dbUserId)
+      .single();
+
+    if (contactError || !contact) {
+      return { success: false, error: 'Contact not found or access denied' };
+    }
+
+    // 3. Fetch all interactions (ordered by date DESC)
+    const { data: interactions, error: interactionsError } = await supabase
+      .from('contact_interactions')
+      .select('*')
+      .eq('contact_id', contactId)
+      .order('interaction_date', { ascending: false });
+
+    if (interactionsError) {
+      console.error(
+        'Interactions fetch failed:',
+        redactPII({
+          contact_id: contactId,
+          user_id: dbUserId,
+          error: interactionsError.message,
+        })
+      );
+      return { success: false, error: 'Failed to fetch interactions' };
+    }
+
+    const interactionList = interactions || [];
+    const totalInteractionCount = interactionList.length;
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const recentInteractionCount = interactionList.filter(
+      (interaction) =>
+        new Date(interaction.interaction_date).getTime() >= cutoff
+    ).length;
+
+    let strength: RelationshipStrength = 'cold';
+    if (recentInteractionCount >= 3) {
+      strength = 'strong';
+    } else if (recentInteractionCount >= 1) {
+      strength = 'warm';
+    }
+
+    // 4. Get referral statistics
+    const { data: applications, error: referralsError } = await supabase
+      .from('applications')
+      .select('id, status')
+      .eq('user_id', dbUserId)
+      .eq('referral_contact_id', contactId);
+
+    let referralStats: ContactWithDetails['referralStats'];
+
+    if (!referralsError && applications) {
+      const totalReferrals = applications.length;
+      const activeReferrals = applications.filter(
+        (app) => !['rejected', 'withdrawn'].includes(app.status)
+      ).length;
+      const offersReceived = applications.filter((app) =>
+        ['offer', 'accepted'].includes(app.status)
+      ).length;
+      const conversionRate =
+        totalReferrals > 0 ? (offersReceived / totalReferrals) * 100 : 0;
+      referralStats = {
+        totalReferrals,
+        activeReferrals,
+        offersReceived,
+        conversionRate,
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        ...contact,
+        interactions: interactionList,
+        relationshipStrength: {
+          strength,
+          recentInteractionCount,
+          lastInteractionDate: contact.last_interaction_date || undefined,
+        },
+        totalInteractionCount,
+        referralStats,
+      },
+    };
+  },
+  ['contact-details'],
+  { revalidate: CONTACTS_CACHE_REVALIDATE, tags: [CONTACTS_CACHE_TAG] }
+);
+
 // =============================================
 // CREATE CONTACT
 // =============================================
@@ -184,6 +387,9 @@ export async function createContact(
       return { success: false, error: 'Failed to create contact' };
     }
 
+    revalidatePath('/dashboard/contacts');
+    revalidateTag(CONTACTS_CACHE_TAG, 'max');
+
     // 4. Return success (PII redacted in response to user, but full data returned)
     return { success: true, contact };
   } catch (error) {
@@ -225,92 +431,7 @@ export async function getContacts(
     if (authError || !dbUser) {
       return { success: false, error: authError || 'Authentication failed' };
     }
-
-    // 2. Build base query (RLS handles ownership automatically)
-    let query = supabase
-      .from('contacts')
-      .select(
-        `
-        *,
-        interaction_count:contact_interactions(count),
-        applications_count:applications!applications_referral_contact_id_fkey(count)
-      `,
-        { count: 'exact' }
-      )
-      .eq('user_id', dbUser.id);
-
-    // 3. Apply full-text search if provided
-    if (filters?.search && filters.search.trim().length > 0) {
-      const searchTerm = filters.search.trim();
-      // Use ilike for case-insensitive search across multiple fields
-      query = query.or(
-        `name.ilike.%${searchTerm}%,` +
-          `company.ilike.%${searchTerm}%,` +
-          `position.ilike.%${searchTerm}%,` +
-          `notes.ilike.%${searchTerm}%`
-      );
-    }
-
-    // 4. Apply filters
-    if (filters?.contactType) {
-      query = query.eq('contact_type', filters.contactType);
-    }
-
-    if (filters?.company) {
-      query = query.eq('company', filters.company);
-    }
-
-    if (filters?.tags && filters.tags.length > 0) {
-      // Match any of the provided tags (array overlap)
-      query = query.overlaps('tags', filters.tags);
-    }
-
-    // 5. Apply sorting
-    const sortField = sortOptions?.field || 'name';
-    const sortOrder = sortOptions?.order || 'asc';
-
-    if (sortField === 'last_interaction_date') {
-      // NULLS LAST for interaction date (contacts without interactions appear last)
-      query = query.order(sortField, {
-        ascending: sortOrder === 'asc',
-        nullsFirst: false,
-      });
-    } else {
-      query = query.order(sortField, { ascending: sortOrder === 'asc' });
-    }
-
-    // 6. Apply pagination
-    query = query.range(offset, offset + limit - 1);
-
-    // 7. Execute query
-    const { data: contacts, error: queryError, count } = await query;
-
-    if (queryError) {
-      console.error(
-        'Contact fetch failed:',
-        redactPII({ user_id: dbUser.id, error: queryError.message })
-      );
-      return { success: false, error: 'Failed to fetch contacts' };
-    }
-
-    // Transform to include stats (handle Supabase's count array format)
-    const contactsWithStats: ContactWithStats[] = (contacts || []).map(
-      (contact) => ({
-        ...contact,
-        interaction_count: Array.isArray(contact.interaction_count)
-          ? contact.interaction_count[0]?.count || 0
-          : 0,
-        applications_count: Array.isArray(contact.applications_count)
-          ? contact.applications_count[0]?.count || 0
-          : 0,
-      })
-    );
-
-    return {
-      success: true,
-      contacts: contactsWithStats,
-      total: count || 0,
-    };
+    return getContactsCached(dbUser.id, filters, sortOptions, limit, offset);
   } catch (error) {
     console.error('Unexpected error in getContacts:', error);
     return { success: false, error: 'An unexpected error occurred' };
@@ -451,6 +572,9 @@ export async function updateContact(
       return { success: false, error: 'Failed to update contact' };
     }
 
+    revalidatePath('/dashboard/contacts');
+    revalidateTag(CONTACTS_CACHE_TAG, 'max');
+
     return { success: true, contact };
   } catch (error) {
     console.error('Unexpected error in updateContact:', error);
@@ -502,6 +626,9 @@ export async function deleteContact(
       );
       return { success: false, error: 'Failed to delete contact' };
     }
+
+    revalidatePath('/dashboard/contacts');
+    revalidateTag(CONTACTS_CACHE_TAG, 'max');
 
     return { success: true };
   } catch (error) {
@@ -595,6 +722,9 @@ export async function linkContactToApplication(
       return { success: false, error: 'Failed to link contact' };
     }
 
+    revalidateTag(CONTACTS_CACHE_TAG, 'max');
+    revalidateTag('applications', 'max');
+
     return { success: true };
   } catch (error) {
     console.error('Unexpected error in linkContactToApplication:', error);
@@ -643,6 +773,9 @@ export async function unlinkContactFromApplication(
       );
       return { success: false, error: 'Failed to unlink contact' };
     }
+
+    revalidateTag(CONTACTS_CACHE_TAG, 'max');
+    revalidateTag('applications', 'max');
 
     return { success: true };
   } catch (error) {
@@ -731,6 +864,7 @@ export async function createContactInteraction(
 
     // 5. Revalidate contact detail pages
     revalidatePath('/dashboard/contacts');
+    revalidateTag(CONTACTS_CACHE_TAG, 'max');
 
     return { success: true, interaction };
   } catch (error) {
@@ -907,6 +1041,7 @@ export async function deleteContactInteraction(
 
     // 4. Revalidate contact detail pages
     revalidatePath('/dashboard/contacts');
+    revalidateTag(CONTACTS_CACHE_TAG, 'max');
 
     return { success: true };
   } catch (error) {
@@ -1021,62 +1156,70 @@ export async function getContactWithDetails(
     if (authError || !dbUser) {
       return { success: false, error: authError || 'Authentication failed' };
     }
+    return getContactWithDetailsCached(dbUser.id, contactId);
+  } catch (error) {
+    console.error('Unexpected error in getContactWithDetails:', error);
+    return { success: false, error: 'An unexpected error occurred' };
+  }
+}
 
-    // 2. Fetch contact with ownership verification
+/**
+ * Get referral statistics for a contact
+ * Calculates total referrals, active referrals, offers, and conversion rate
+ *
+ * Ticket #18: Referral Tracking
+ */
+export async function getContactReferralStats(contactId: string) {
+  try {
+    // 1. Authenticate user
+    const { supabase, dbUser, error: authError } = await authenticateUser();
+    if (authError || !dbUser) {
+      return { success: false, error: authError || 'Authentication failed' };
+    }
+
+    // 2. Verify contact ownership (IDOR protection)
     const { data: contact, error: contactError } = await supabase
       .from('contacts')
-      .select('*')
+      .select('id, user_id')
       .eq('id', contactId)
       .eq('user_id', dbUser.id)
       .single();
 
     if (contactError || !contact) {
-      return { success: false, error: 'Contact not found or access denied' };
+      return { success: false, error: 'Contact not found' };
     }
 
-    // 3. Fetch all interactions (ordered by date DESC)
-    const { data: interactions, error: interactionsError } = await supabase
-      .from('contact_interactions')
-      .select('*')
-      .eq('contact_id', contactId)
-      .order('interaction_date', { ascending: false });
+    // 3. Get all applications with this referral
+    const { data: applications, error: queryError } = await supabase
+      .from('applications')
+      .select('id, status')
+      .eq('user_id', dbUser.id)
+      .eq('referral_contact_id', contactId);
 
-    if (interactionsError) {
-      console.error(
-        'Interactions fetch failed:',
-        redactPII({
-          contact_id: contactId,
-          user_id: dbUser.id,
-          error: interactionsError.message,
-        })
-      );
-      return { success: false, error: 'Failed to fetch interactions' };
+    if (queryError) {
+      return { success: false, error: 'Failed to fetch stats' };
     }
 
-    // 4. Calculate relationship strength
-    const strengthResult = await calculateRelationshipStrength(contactId);
-    if (!strengthResult.success || !strengthResult.data) {
-      return {
-        success: false,
-        error: strengthResult.error || 'Failed to calculate strength',
-      };
-    }
+    const apps = applications || [];
 
-    // 5. Count total interactions
-    const totalInteractionCount = interactions?.length || 0;
+    // 4. Calculate metrics
+    const totalReferrals = apps.length;
+    const activeReferrals = apps.filter(
+      app => !['rejected', 'withdrawn'].includes(app.status)
+    ).length;
+    const offersReceived = apps.filter(
+      app => ['offer', 'accepted'].includes(app.status)
+    ).length;
+    const conversionRate = totalReferrals > 0
+      ? (offersReceived / totalReferrals) * 100
+      : 0;
 
-    // 6. Return full contact details
     return {
       success: true,
-      data: {
-        ...contact,
-        interactions: interactions || [],
-        relationshipStrength: strengthResult.data,
-        totalInteractionCount,
-      },
+      stats: { totalReferrals, activeReferrals, offersReceived, conversionRate },
     };
   } catch (error) {
-    console.error('Unexpected error in getContactWithDetails:', error);
+    console.error('Unexpected error in getContactReferralStats:', error);
     return { success: false, error: 'An unexpected error occurred' };
   }
 }

@@ -69,7 +69,7 @@ export function DashboardClient({
       // Fetch from server
       getApplications(updatedFilters)
         .then((result) => {
-          if (result.data && result.pagination) {
+          if ('data' in result && 'pagination' in result) {
             setApplications(result.data);
             setPagination(result.pagination);
           }

@@ -19,7 +19,7 @@ export default async function ApplicationPage({ params }: PageProps) {
   const { id } = await params;
   const result = await getApplication(id);
 
-  if (result.error || !result.data) {
+  if ('error' in result || !('data' in result)) {
     notFound();
   }
 

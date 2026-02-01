@@ -21,11 +21,11 @@ export default async function DashboardPage() {
   return (
     <DashboardClient
       userName={user.user_metadata?.full_name || user.email || 'User'}
-      initialApplications={result.data || []}
+      initialApplications={'data' in result ? result.data : []}
       initialPagination={
-        result.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 }
+        'pagination' in result ? result.pagination : { page: 1, limit: 20, total: 0, totalPages: 0 }
       }
-      error={result.error || null}
+      error={'error' in result ? (result.error ?? null) : null}
     />
   );
 }

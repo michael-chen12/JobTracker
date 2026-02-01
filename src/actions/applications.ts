@@ -1,7 +1,7 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
-import { createClient } from '@/lib/supabase/server';
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
+import { createAdminClient, createClient } from '@/lib/supabase/server';
 import {
   createApplicationSchema,
   updateApplicationSchema,
@@ -10,6 +10,9 @@ import {
   type UpdateApplicationInput,
   type CreateNoteInput,
 } from '@/schemas/application';
+
+const APPLICATIONS_CACHE_TAG = 'applications';
+const APPLICATIONS_CACHE_REVALIDATE = 30;
 
 /**
  * Create a new job application
@@ -72,6 +75,8 @@ export async function createApplication(data: CreateApplicationInput) {
     console.log('Application created successfully:', application.id);
     revalidatePath('/dashboard');
     revalidatePath('/applications');
+    revalidateTag(APPLICATIONS_CACHE_TAG, 'max');
+    revalidateTag('contacts', 'max');
 
     return { data: application };
   } catch (error) {
@@ -114,6 +119,8 @@ export async function updateApplication(id: string, data: UpdateApplicationInput
     revalidatePath('/dashboard');
     revalidatePath('/applications');
     revalidatePath(`/applications/${id}`);
+    revalidateTag(APPLICATIONS_CACHE_TAG, 'max');
+    revalidateTag('contacts', 'max');
 
     return { data: application };
   } catch (error) {
@@ -149,6 +156,8 @@ export async function deleteApplication(id: string) {
 
     revalidatePath('/dashboard');
     revalidatePath('/applications');
+    revalidateTag(APPLICATIONS_CACHE_TAG, 'max');
+    revalidateTag('contacts', 'max');
 
     return { success: true };
   } catch (error) {
@@ -164,32 +173,22 @@ export interface GetApplicationsParams {
   sortOrder?: 'asc' | 'desc';
   status?: string[];
   search?: string;
+  hasReferral?: boolean;
 }
 
-/**
- * Get all applications for the current user with filtering, sorting, and pagination
- */
-export async function getApplications(params: GetApplicationsParams = {}) {
-  const {
-    page = 1,
-    limit = 20,
-    sortBy = 'created_at',
-    sortOrder = 'desc',
-    status,
-    search,
-  } = params;
-
-  try {
-    const supabase = await createClient();
-
+const getApplicationsCached = unstable_cache(
+  async (dbUserId: string, params: GetApplicationsParams = {}) => {
     const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+      page = 1,
+      limit = 20,
+      sortBy = 'created_at',
+      sortOrder = 'desc',
+      status,
+      search,
+      hasReferral,
+    } = params;
 
-    if (authError || !user) {
-      return { error: 'Unauthorized' };
-    }
+    const supabase = createAdminClient();
 
     // Build query with count for pagination
     let query = supabase
@@ -197,10 +196,12 @@ export async function getApplications(params: GetApplicationsParams = {}) {
       .select(
         `
         *,
-        notes:application_notes(*)
+        notes:application_notes(*),
+        referral_contact:contacts!referral_contact_id(id, name)
       `,
         { count: 'exact' }
-      );
+      )
+      .eq('user_id', dbUserId);
 
     // Apply status filter
     if (status && status.length > 0) {
@@ -210,6 +211,15 @@ export async function getApplications(params: GetApplicationsParams = {}) {
     // Apply search filter (case-insensitive search on company and position)
     if (search && search.trim()) {
       query = query.or(`company.ilike.%${search}%,position.ilike.%${search}%`);
+    }
+
+    // Apply referral filter
+    if (hasReferral !== undefined) {
+      if (hasReferral) {
+        query = query.not('referral_contact_id', 'is', null);
+      } else {
+        query = query.is('referral_contact_id', null);
+      }
     }
 
     // Apply sorting
@@ -227,8 +237,16 @@ export async function getApplications(params: GetApplicationsParams = {}) {
       return { error: error.message };
     }
 
+    // Transform response to include referral contact details
+    const transformedApplications =
+      applications?.map((app) => ({
+        ...app,
+        referral_contact_id: app.referral_contact?.id || null,
+        referral_contact_name: app.referral_contact?.name || null,
+      })) || [];
+
     return {
-      data: applications,
+      data: transformedApplications,
       pagination: {
         page,
         limit,
@@ -236,6 +254,68 @@ export async function getApplications(params: GetApplicationsParams = {}) {
         totalPages: Math.ceil((count || 0) / limit),
       },
     };
+  },
+  ['applications-list'],
+  { revalidate: APPLICATIONS_CACHE_REVALIDATE, tags: [APPLICATIONS_CACHE_TAG] }
+);
+
+const getApplicationCached = unstable_cache(
+  async (dbUserId: string, id: string) => {
+    const supabase = createAdminClient();
+
+    // Get application with related data
+    const { data: application, error } = await supabase
+      .from('applications')
+      .select(
+        `
+        *,
+        notes:application_notes(*),
+        documents:application_documents(*),
+        milestones:milestones(*)
+      `
+      )
+      .eq('id', id)
+      .eq('user_id', dbUserId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching application:', error);
+      return { error: error.message };
+    }
+
+    return { data: application };
+  },
+  ['application-detail'],
+  { revalidate: APPLICATIONS_CACHE_REVALIDATE, tags: [APPLICATIONS_CACHE_TAG] }
+);
+
+/**
+ * Get all applications for the current user with filtering, sorting, and pagination
+ */
+export async function getApplications(params: GetApplicationsParams = {}) {
+  try {
+    const supabase = await createClient();
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { error: 'Unauthorized' };
+    }
+
+    const { data: dbUser, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_id', user.id)
+      .single();
+
+    if (userError || !dbUser) {
+      return { error: 'User not found' };
+    }
+
+    return getApplicationsCached(dbUser.id, params);
   } catch (error) {
     console.error('Error fetching applications:', error);
     return { error: 'Failed to fetch applications' };
@@ -258,26 +338,17 @@ export async function getApplication(id: string) {
       return { error: 'Unauthorized' };
     }
 
-    // Get application with related data
-    const { data: application, error } = await supabase
-      .from('applications')
-      .select(
-        `
-        *,
-        notes:application_notes(*),
-        documents:application_documents(*),
-        milestones:milestones(*)
-      `
-      )
-      .eq('id', id)
+    const { data: dbUser, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_id', user.id)
       .single();
 
-    if (error) {
-      console.error('Error fetching application:', error);
-      return { error: error.message };
+    if (userError || !dbUser) {
+      return { error: 'User not found' };
     }
 
-    return { data: application };
+    return getApplicationCached(dbUser.id, id);
   } catch (error) {
     console.error('Error fetching application:', error);
     return { error: 'Failed to fetch application' };
@@ -315,6 +386,7 @@ export async function createNote(data: CreateNoteInput) {
     }
 
     revalidatePath(`/applications/${data.application_id}`);
+    revalidateTag(APPLICATIONS_CACHE_TAG, 'max');
 
     return { data: note };
   } catch (error) {
@@ -348,6 +420,7 @@ export async function deleteNote(id: string, applicationId: string) {
     }
 
     revalidatePath(`/applications/${applicationId}`);
+    revalidateTag(APPLICATIONS_CACHE_TAG, 'max');
 
     return { success: true };
   } catch (error) {
