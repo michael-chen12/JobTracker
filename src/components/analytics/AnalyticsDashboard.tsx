@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { TrendingUp, Users, Calendar, Target, Award } from 'lucide-react';
 import type { AnalyticsData, DateRangeFilter } from '@/types/analytics';
 import { MetricCard } from './MetricCard';
 import { ApplicationTrendsChart } from './ApplicationTrendsChart';
@@ -68,29 +67,24 @@ export function AnalyticsDashboard({ initialData, initialRange }: AnalyticsDashb
             label={data.metrics.totalApplications.label}
             value={data.metrics.totalApplications.value}
             change={data.metrics.totalApplications.change}
-            icon={<TrendingUp className="h-4 w-4" />}
           />
           <MetricCard
             label={data.metrics.responseRate.label}
             value={data.metrics.responseRate.value}
             change={data.metrics.responseRate.change}
-            icon={<Users className="h-4 w-4" />}
           />
           <MetricCard
             label={data.metrics.interviewRate.label}
             value={data.metrics.interviewRate.value}
             change={data.metrics.interviewRate.change}
-            icon={<Calendar className="h-4 w-4" />}
           />
           <MetricCard
             label={data.metrics.averageDaysToResponse.label}
             value={data.metrics.averageDaysToResponse.value}
-            icon={<Target className="h-4 w-4" />}
           />
           <MetricCard
             label={data.metrics.averageMatchScore.label}
             value={data.metrics.averageMatchScore.value}
-            icon={<Award className="h-4 w-4" />}
           />
         </div>
 

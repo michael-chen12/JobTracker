@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import SignOutButton from '@/components/auth/SignOutButton';
 import Link from 'next/link';
 import DashboardNav from '@/components/layout/DashboardNav';
+import MobileNav from '@/components/layout/MobileNav';
 
 export default async function DashboardLayout({
   children,
@@ -20,15 +21,20 @@ export default async function DashboardLayout({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
+              {/* Mobile Menu */}
+              <MobileNav />
+
               <Link href="/dashboard" className="text-xl font-bold text-gray-900 dark:text-white">
                 Job Tracker
               </Link>
+
+              {/* Desktop Nav */}
               <DashboardNav />
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
               {user && (
                 <>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="hidden sm:block text-sm text-gray-600 dark:text-gray-400 truncate max-w-[150px]">
                     {user.email}
                   </span>
                   <SignOutButton />

@@ -29,16 +29,8 @@ export default function DashboardNav() {
   }, [pathname]);
 
   useEffect(() => {
-    if (!isNavigating) return;
-    setProgress(40);
+    setProgress(isNavigating ? 40 : 0);
   }, [isNavigating]);
-
-  useEffect(() => {
-    if (isNavigating || progress === 0 || progress === 100) return;
-    setProgress(100);
-    const timeout = setTimeout(() => setProgress(0), 100);
-    return () => clearTimeout(timeout);
-  }, [isNavigating, progress]);
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {
@@ -48,7 +40,7 @@ export default function DashboardNav() {
   };
 
   return (
-    <div className="ml-10">
+    <div className="ml-10 hidden md:block">
       <div
         role="progressbar"
         aria-valuemin={0}
