@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,7 +12,7 @@ import {
 import { useDebounce } from '@/hooks/useDebounce';
 
 interface TableToolbarProps {
-  onFilterChange: (filters: { search?: string; status?: string[] }) => void;
+  onFilterChange: (filters: { search?: string; status?: string[]; hasReferral?: boolean }) => void;
 }
 
 const statusOptions = [
@@ -29,6 +29,7 @@ const statusOptions = [
 export function TableToolbar({ onFilterChange }: TableToolbarProps) {
   const [search, setSearch] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [hasReferral, setHasReferral] = useState<boolean | undefined>(undefined);
   const debouncedSearch = useDebounce(search, 500);
   const prevDebouncedSearchRef = useRef(debouncedSearch);
 
@@ -36,7 +37,7 @@ export function TableToolbar({ onFilterChange }: TableToolbarProps) {
   useEffect(() => {
     if (prevDebouncedSearchRef.current !== debouncedSearch) {
       prevDebouncedSearchRef.current = debouncedSearch;
-      onFilterChange({ search: debouncedSearch, status: selectedStatuses });
+      onFilterChange({ search: debouncedSearch, status: selectedStatuses, hasReferral });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch]); // Intentionally omit onFilterChange and selectedStatuses to prevent infinite loop
@@ -51,16 +52,26 @@ export function TableToolbar({ onFilterChange }: TableToolbarProps) {
       : [...selectedStatuses, status];
 
     setSelectedStatuses(newStatuses);
-    onFilterChange({ search: debouncedSearch, status: newStatuses });
+    onFilterChange({ search: debouncedSearch, status: newStatuses, hasReferral });
+  };
+
+  const handleReferralChange = (value: boolean | undefined) => {
+    setHasReferral(value);
+    onFilterChange({
+      search: debouncedSearch,
+      status: selectedStatuses,
+      hasReferral: value,
+    });
   };
 
   const handleClearFilters = () => {
     setSearch('');
     setSelectedStatuses([]);
-    onFilterChange({ search: '', status: [] });
+    setHasReferral(undefined);
+    onFilterChange({ search: '', status: [], hasReferral: undefined });
   };
 
-  const hasFilters = search.length > 0 || selectedStatuses.length > 0;
+  const hasFilters = search.length > 0 || selectedStatuses.length > 0 || hasReferral !== undefined;
 
   return (
     <div className="flex items-center justify-between gap-4">
@@ -108,6 +119,56 @@ export function TableToolbar({ onFilterChange }: TableToolbarProps) {
                   </span>
                 </label>
               ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* Referral Filter */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              <Users className="h-4 w-4" />
+              Referral
+              {hasReferral !== undefined && (
+                <span className="ml-1 rounded-full bg-teal-100 dark:bg-teal-900 px-2 py-0.5 text-xs font-medium text-teal-800 dark:text-teal-300">
+                  {hasReferral ? 'Yes' : 'No'}
+                </span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-48" align="start">
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm mb-3">Filter by Referral</h4>
+              <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded">
+                <input
+                  type="radio"
+                  name="referral"
+                  checked={hasReferral === true}
+                  onChange={() => handleReferralChange(true)}
+                  className="h-4 w-4"
+                />
+                <span className="text-sm">Has Referral</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded">
+                <input
+                  type="radio"
+                  name="referral"
+                  checked={hasReferral === false}
+                  onChange={() => handleReferralChange(false)}
+                  className="h-4 w-4"
+                />
+                <span className="text-sm">No Referral</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded">
+                <input
+                  type="radio"
+                  name="referral"
+                  checked={hasReferral === undefined}
+                  onChange={() => handleReferralChange(undefined)}
+                  className="h-4 w-4"
+                />
+                <span className="text-sm">All</span>
+              </label>
             </div>
           </PopoverContent>
         </Popover>

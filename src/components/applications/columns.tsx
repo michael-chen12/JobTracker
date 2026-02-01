@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowUpDown } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
 import { MatchScoreBadge } from './MatchScoreBadge';
+import { ReferralBadge } from './ReferralBadge';
 
 export interface ApplicationRow {
   id: string;
@@ -18,6 +19,8 @@ export interface ApplicationRow {
   analyzed_at: string | null;
   job_description: string | null;
   job_url: string | null;
+  referral_contact_id: string | null;
+  referral_contact_name?: string | null;
 }
 
 export const columns: ColumnDef<ApplicationRow>[] = [
@@ -81,16 +84,39 @@ export const columns: ColumnDef<ApplicationRow>[] = [
     cell: ({ row }) => {
       const matchScore = row.getValue('match_score') as number | null;
       const hasJobInfo = row.original.job_description || row.original.job_url;
-      
+
       if (!matchScore && !hasJobInfo) {
         return <div className="text-sm text-gray-400 dark:text-gray-600">—</div>;
       }
-      
+
       return (
         <div onClick={(e) => e.stopPropagation()}>
           <MatchScoreBadge
             applicationId={row.original.id}
             matchScore={matchScore}
+          />
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: 'referral_contact_id',
+    header: 'Referral',
+    cell: ({ row }) => {
+      const referralContactId = row.getValue('referral_contact_id') as string | null;
+      const referralContactName = row.original.referral_contact_name;
+
+      if (!referralContactId) {
+        return <div className="text-sm text-gray-400 dark:text-gray-600">—</div>;
+      }
+
+      return (
+        <div onClick={(e) => e.stopPropagation()}>
+          <ReferralBadge
+            contactId={referralContactId}
+            contactName={referralContactName || undefined}
+            size="md"
+            showContactName={true}
           />
         </div>
       );

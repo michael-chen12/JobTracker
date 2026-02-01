@@ -98,6 +98,21 @@ export interface RelationshipStrengthResult {
 }
 
 /**
+ * Referral statistics for a contact
+ * Tracks effectiveness of referrals from this contact
+ */
+export interface ReferralStats {
+  /** Total number of applications referred by this contact */
+  totalReferrals: number;
+  /** Number of active referrals (not rejected/withdrawn) */
+  activeReferrals: number;
+  /** Number of referrals that resulted in offers */
+  offersReceived: number;
+  /** Conversion rate (offers / total referrals) as percentage */
+  conversionRate: number;
+}
+
+/**
  * Contact with full details for detail page
  * Includes interactions, relationship metrics, and statistics
  */
@@ -112,6 +127,8 @@ export interface ContactWithDetails extends Omit<Contact, 'tags' | 'last_interac
   tags?: string[];
   /** Last interaction date (from migration 20260202) */
   last_interaction_date?: string | null;
+  /** Referral tracking statistics (from Ticket #18) */
+  referralStats?: ReferralStats;
 }
 
 // =============================================

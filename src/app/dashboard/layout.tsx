@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import SignOutButton from '@/components/auth/SignOutButton';
 import Link from 'next/link';
+import DashboardNav from '@/components/layout/DashboardNav';
 
 export default async function DashboardLayout({
   children,
@@ -22,26 +23,7 @@ export default async function DashboardLayout({
               <Link href="/dashboard" className="text-xl font-bold text-gray-900 dark:text-white">
                 Job Tracker
               </Link>
-              <nav className="ml-10 flex gap-6">
-                <Link
-                  href="/dashboard"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  href="/applications"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                >
-                  Applications
-                </Link>
-                <Link
-                  href="/dashboard/profile"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                >
-                  Profile
-                </Link>
-              </nav>
+              <DashboardNav />
             </div>
             <div className="flex items-center gap-4">
               {user && (

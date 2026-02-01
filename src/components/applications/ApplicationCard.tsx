@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ApplicationRow } from './columns';
 import { StatusBadge } from './StatusBadge';
 import { MatchScoreBadge } from './MatchScoreBadge';
+import { ReferralBadge } from './ReferralBadge';
 import { Calendar, MapPin } from 'lucide-react';
 interface ApplicationCardProps {
   application: ApplicationRow;
@@ -12,7 +13,7 @@ interface ApplicationCardProps {
 
 /**
  * Custom comparison for ApplicationCard
- * Compares by ID and updated_at to prevent unnecessary re-renders
+ * Compares by ID, updated_at, match_score, and referral to prevent unnecessary re-renders
  */
 function compareApplicationCards(
   prev: ApplicationCardProps,
@@ -20,7 +21,9 @@ function compareApplicationCards(
 ): boolean {
   return (
     prev.application.id === next.application.id &&
-    prev.application.updated_at === next.application.updated_at
+    prev.application.updated_at === next.application.updated_at &&
+    prev.application.match_score === next.application.match_score &&
+    prev.application.referral_contact_id === next.application.referral_contact_id
   );
 }
 
@@ -76,6 +79,16 @@ function ApplicationCardComponent({ application }: ApplicationCardProps) {
           <MatchScoreBadge
             applicationId={application.id}
             matchScore={application.match_score}
+          />
+        </div>
+      )}
+
+      {/* Referral Badge */}
+      {application.referral_contact_id && (
+        <div className="mb-3">
+          <ReferralBadge
+            contactId={application.referral_contact_id}
+            size="sm"
           />
         </div>
       )}
