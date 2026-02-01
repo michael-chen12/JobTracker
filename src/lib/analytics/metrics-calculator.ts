@@ -31,9 +31,31 @@ import type {
 } from '@/types/analytics';
 
 /**
- * Get date threshold for filtering applications based on date range
+ * Get color for application status in charts
+ * Uses hsl values from globals.css chart colors
  */
-export function getDateRangeFilter(range: DateRangeFilter, now: Date = new Date()): Date {
+function getStatusColor(status: ApplicationStatus): string {
+  const colorMap: Record<ApplicationStatus, string> = {
+    bookmarked: 'hsl(var(--chart-4))', // Yellow/amber
+    applied: 'hsl(var(--chart-1))', // Primary color
+    screening: 'hsl(var(--chart-2))', // Teal
+    interviewing: 'hsl(var(--chart-5))', // Orange/coral
+    offer: 'hsl(var(--chart-3))', // Green
+    accepted: '#22c55e', // Bright green
+    rejected: '#ef4444', // Red
+    withdrawn: '#6b7280', // Gray
+  };
+  return colorMap[status];
+}
+
+/**
+ * Get date threshold for filtering applications based on date range
+ * Returns null for 'all' to indicate no date filtering
+ */
+export function getDateRangeFilter(range: DateRangeFilter, now: Date = new Date()): Date | null {
+  if (range === 'all') {
+    return null;
+  }
   const days = parseInt(range, 10);
   const threshold = new Date(now);
   threshold.setDate(threshold.getDate() - days);
@@ -65,6 +87,7 @@ export function calculateStatusDistribution(applications: Application[]): Status
         status,
         count,
         percentage: Math.round((count / total) * 100 * 10) / 10, // Round to 1 decimal
+        color: getStatusColor(status),
       });
     }
   });
@@ -95,18 +118,21 @@ export function calculateApplicationFunnel(applications: Application[]): Applica
       count: appliedCount,
       percentage: total > 0 ? 100 : 0,
       label: 'Applied',
+      conversionRate: appliedCount > 0 ? Math.round((screeningCount / appliedCount) * 100) : 0,
     },
     {
       stage: 'screening',
       count: screeningCount,
       percentage: total > 0 ? Math.round((screeningCount / total) * 100 * 10) / 10 : 0,
       label: 'Screening',
+      conversionRate: screeningCount > 0 ? Math.round((interviewingCount / screeningCount) * 100) : 0,
     },
     {
       stage: 'interviewing',
       count: interviewingCount,
       percentage: total > 0 ? Math.round((interviewingCount / total) * 100 * 10) / 10 : 0,
       label: 'Interviewing',
+      conversionRate: interviewingCount > 0 ? Math.round((offerCount / interviewingCount) * 100) : 0,
     },
     {
       stage: 'offer',

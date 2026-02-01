@@ -1,7 +1,7 @@
 import { ApplicationStatus } from './application';
 
 // Date range filter options
-export type DateRangeFilter = '30' | '60' | '90';
+export type DateRangeFilter = '30' | '60' | '90' | 'all';
 
 // Metrics card data structure
 export interface MetricsCardData {
@@ -24,6 +24,7 @@ export interface StatusDistribution {
   status: ApplicationStatus;
   count: number;
   percentage: number;
+  color: string; // Chart color for this status
 }
 
 // Application funnel stages
@@ -34,6 +35,7 @@ export interface ApplicationFunnel {
   count: number;
   percentage: number;
   label: string; // Display name for the stage
+  conversionRate?: number; // Conversion rate to next stage
 }
 
 // Top companies data
