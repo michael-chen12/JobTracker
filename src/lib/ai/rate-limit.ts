@@ -6,12 +6,14 @@ const RATE_LIMITS: RateLimitConfig = {
   resume_parse: 10,
   summarize_notes: 50,
   job_analysis: 10,
+  generate_followups: 30,
 };
 
 const OPERATION_LABELS: Record<OperationType, string> = {
   resume_parse: 'resume parsing',
   summarize_notes: 'notes summarization',
   job_analysis: 'job analysis',
+  generate_followups: 'follow-up generation',
 };
 
 function formatResetTime(resetTime: Date): string {

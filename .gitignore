@@ -49,4 +49,5 @@ node_modules/
 # AI/Claude folders
 .claude/
 .claude-plugin/
+docs/
 

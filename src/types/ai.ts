@@ -2,7 +2,7 @@
  * AI service types and interfaces
  */
 
-export type OperationType = 'resume_parse' | 'summarize_notes' | 'job_analysis';
+export type OperationType = 'resume_parse' | 'summarize_notes' | 'job_analysis' | 'generate_followups';
 
 export interface AIUsageLog {
   id: string;
@@ -25,6 +25,7 @@ export interface RateLimitConfig {
   resume_parse: number;      // 10 per hour
   summarize_notes: number;   // 50 per hour
   job_analysis: number;      // 10 per hour
+  generate_followups: number; // 30 per hour
 }
 
 export interface AIServiceResponse<T> {
@@ -94,4 +95,20 @@ export interface JobMatchAnalysis {
   matchingSkills: string[];
   missingSkills: string[];
   explanation: string;
+}
+
+// Follow-up suggestions output
+export interface FollowUpSuggestion {
+  action: string;
+  timing: string;
+  priority: 'high' | 'medium' | 'low';
+  rationale: string;
+  template?: string;
+  type: 'email' | 'call' | 'linkedin' | 'application_check';
+}
+
+export interface FollowUpSuggestions {
+  suggestions: FollowUpSuggestion[];
+  contextSummary: string;
+  nextCheckDate?: string;
 }

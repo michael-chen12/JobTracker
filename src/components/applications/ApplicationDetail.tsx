@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ApplicationWithRelations } from '@/types/application';
@@ -21,10 +21,14 @@ import { DocumentsSection } from './DocumentsSection';
 import { DeleteApplicationButton } from './DeleteApplicationButton';
 import { EditableField } from './EditableField';
 import { MatchAnalysisCard } from './MatchAnalysisCard';
+import { FollowUpSuggestionsCard } from './FollowUpSuggestionsCard';
+import { ContactLinkingSection } from '../contacts/ContactLinkingSection';
 import { updateApplication } from '@/actions/applications';
 import { analyzeJobMatch } from '@/actions/analyze-job';
+import { getContact } from '@/actions/contacts';
 import { useToast } from '@/hooks/use-toast';
-import type { MatchAnalysis } from '@/types/ai';
+import type { MatchAnalysis, FollowUpSuggestions } from '@/types/ai';
+import type { Contact } from '@/types/contacts';
 
 interface ApplicationDetailProps {
   application: ApplicationWithRelations;
@@ -47,6 +51,39 @@ export function ApplicationDetail({ application }: ApplicationDetailProps) {
   const [matchScore, setMatchScore] = useState(application.match_score);
   const [matchAnalysis, setMatchAnalysis] = useState(application.match_analysis);
   const [analyzedAt, setAnalyzedAt] = useState(application.analyzed_at);
+  const [followUpSuggestions, setFollowUpSuggestions] = useState<FollowUpSuggestions | null>(
+    (application as any).follow_up_suggestions || null
+  );
+  const [followupSuggestionsAt, setFollowupSuggestionsAt] = useState<string | null>(
+    (application as any).followup_suggestions_at || null
+  );
+  const [referralContact, setReferralContact] = useState<Contact | null>(null);
+  const [isLoadingContact, setIsLoadingContact] = useState(false);
+
+  // Fetch referral contact if linked
+  useEffect(() => {
+    const fetchReferralContact = async () => {
+      const contactId = (application as any).referral_contact_id;
+      if (!contactId) {
+        setReferralContact(null);
+        return;
+      }
+
+      setIsLoadingContact(true);
+      const result = await getContact(contactId);
+      if (result.success && result.contact) {
+        setReferralContact(result.contact);
+      }
+      setIsLoadingContact(false);
+    };
+
+    fetchReferralContact();
+  }, [application]);
+
+  const handleContactLinked = () => {
+    // Refresh the page to get updated referral_contact_id
+    router.refresh();
+  };
 
   const triggerAnalysis = () => {
     toast({
@@ -339,6 +376,28 @@ export function ApplicationDetail({ application }: ApplicationDetailProps) {
           }}
           className="mb-6"
         />
+
+        {/* Follow-Up Suggestions Card */}
+        <FollowUpSuggestionsCard
+          applicationId={application.id}
+          appliedDate={application.applied_date}
+          followUpSuggestions={followUpSuggestions}
+          followupSuggestionsAt={followupSuggestionsAt}
+          onSuggestionsComplete={(suggestions) => {
+            setFollowUpSuggestions(suggestions);
+            setFollowupSuggestionsAt(new Date().toISOString());
+          }}
+          className="mb-6"
+        />
+
+        {/* Contact Linking Section */}
+        {!isLoadingContact && (
+          <ContactLinkingSection
+            applicationId={application.id}
+            referralContact={referralContact}
+            onContactLinked={handleContactLinked}
+          />
+        )}
 
         {/* Notes Section */}
         <NotesSection
