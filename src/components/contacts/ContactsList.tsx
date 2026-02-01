@@ -6,6 +6,7 @@ import type { ContactWithStats, ContactFilters, ContactSortOptions } from '@/typ
 import { EmptyContactsState } from './EmptyContactsState';
 import { ContactFormDialog } from './ContactFormDialog';
 import { ContactCard } from './ContactCard';
+import { ContactCardSkeleton } from '@/components/common/LoadingStates';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search } from 'lucide-react';
@@ -77,23 +78,6 @@ export function ContactsList() {
     loadContacts();
   }, [loadContacts]);
 
-  if (isLoading) {
-    return <div className="text-center py-8">Loading contacts...</div>;
-  }
-
-  if (contacts.length === 0 && !searchQuery) {
-    return (
-      <>
-        <EmptyContactsState onAddContact={handleOpenForm} />
-        <ContactFormDialog
-          open={isFormOpen}
-          onOpenChange={handleCloseForm}
-          onSuccess={handleContactCreated}
-        />
-      </>
-    );
-  }
-
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -114,7 +98,15 @@ export function ContactsList() {
       </div>
 
       {/* Contact List */}
-      {contacts.length === 0 ? (
+      {isLoading ? (
+        <div className="grid gap-4">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <ContactCardSkeleton key={index} />
+          ))}
+        </div>
+      ) : contacts.length === 0 && !searchQuery ? (
+        <EmptyContactsState onAddContact={handleOpenForm} />
+      ) : contacts.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           No contacts found matching &quot;{searchQuery}&quot;
         </div>

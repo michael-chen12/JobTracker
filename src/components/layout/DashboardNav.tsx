@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -14,9 +14,12 @@ const navItems = [
 
 export default function DashboardNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const [isNavigating, setIsNavigating] = useState(false);
+  const search = searchParams?.toString();
   const [progress, setProgress] = useState(0);
+  const progressResetTimeout = useRef<number | null>(null);
+  const isNavigatingRef = useRef(false);
 
   useEffect(() => {
     navItems.forEach((item) => {
@@ -24,13 +27,68 @@ export default function DashboardNav() {
     });
   }, [router]);
 
-  useEffect(() => {
-    setIsNavigating(false);
-  }, [pathname]);
+  const startNavigation = useCallback(() => {
+    if (isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
+    if (progressResetTimeout.current) {
+      window.clearTimeout(progressResetTimeout.current);
+      progressResetTimeout.current = null;
+    }
+    setProgress(30);
+  }, []);
 
   useEffect(() => {
-    setProgress(isNavigating ? 40 : 0);
-  }, [isNavigating]);
+    if (!isNavigatingRef.current) return;
+    setProgress(100);
+    isNavigatingRef.current = false;
+    progressResetTimeout.current = window.setTimeout(() => {
+      setProgress(0);
+      progressResetTimeout.current = null;
+    }, 200);
+  }, [pathname, search]);
+
+  useEffect(() => {
+    const handleClick = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (!(event.target instanceof Element)) return;
+
+      const anchor = event.target.closest('a');
+      if (!anchor) return;
+      if (anchor.getAttribute('target') === '_blank' || anchor.hasAttribute('download')) {
+        return;
+      }
+
+      const href = anchor.getAttribute('href');
+      if (!href || href.startsWith('#')) return;
+      if (href.startsWith('mailto:') || href.startsWith('tel:')) return;
+
+      const url = new URL(href, window.location.href);
+      if (url.origin !== window.location.origin) return;
+      if (url.href === window.location.href) return;
+
+      startNavigation();
+    };
+
+    const handlePopState = () => {
+      startNavigation();
+    };
+
+    document.addEventListener('click', handleClick, true);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      document.removeEventListener('click', handleClick, true);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [startNavigation]);
+  useEffect(() => {
+    return () => {
+      if (progressResetTimeout.current) {
+        window.clearTimeout(progressResetTimeout.current);
+      }
+    };
+  }, []);
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {
@@ -61,19 +119,6 @@ export default function DashboardNav() {
               key={item.href}
               href={item.href}
               aria-current={active ? 'page' : undefined}
-              onClick={(event) => {
-                if (
-                  active ||
-                  event.button !== 0 ||
-                  event.metaKey ||
-                  event.ctrlKey ||
-                  event.shiftKey ||
-                  event.altKey
-                ) {
-                  return;
-                }
-                setIsNavigating(true);
-              }}
               className={cn(
                 'text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors',
                 active &&

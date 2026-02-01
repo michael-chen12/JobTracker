@@ -36,14 +36,14 @@ import type {
  */
 function getStatusColor(status: ApplicationStatus): string {
   const colorMap: Record<ApplicationStatus, string> = {
-    bookmarked: 'hsl(var(--chart-4))', // Yellow/amber
-    applied: 'hsl(var(--chart-1))', // Primary color
-    screening: 'hsl(var(--chart-2))', // Teal
-    interviewing: 'hsl(var(--chart-5))', // Orange/coral
-    offer: 'hsl(var(--chart-3))', // Green
-    accepted: '#22c55e', // Bright green
+    bookmarked: '#f59e0b', // Amber
+    applied: '#2563eb', // Blue
+    screening: '#8b5cf6', // Violet
+    interviewing: '#f97316', // Orange
+    offer: '#22c55e', // Green
+    accepted: '#14b8a6', // Teal
     rejected: '#ef4444', // Red
-    withdrawn: '#6b7280', // Gray
+    withdrawn: '#64748b', // Slate
   };
   return colorMap[status];
 }

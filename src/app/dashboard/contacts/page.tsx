@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { ContactsList } from '@/components/contacts/ContactsList';
+import { ContactCardSkeleton } from '@/components/common/LoadingStates';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ContactsPage() {
@@ -22,10 +23,15 @@ export default function ContactsPage() {
 function ContactsListSkeleton() {
   return (
     <div className="space-y-4">
-      <Skeleton className="h-12 w-full" />
-      {Array.from({ length: 5 }).map((_, i) => (
-        <Skeleton key={i} className="h-24 w-full" />
-      ))}
+      <div className="flex flex-col gap-4 sm:flex-row">
+        <Skeleton className="h-10 flex-1" />
+        <Skeleton className="h-10 w-32" />
+      </div>
+      <div className="grid gap-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <ContactCardSkeleton key={i} />
+        ))}
+      </div>
     </div>
   );
 }
