@@ -43,6 +43,8 @@ import { FormSection } from './FormSection';
 import { TwoColumnRow } from './TwoColumnRow';
 import { SalaryRangeInput } from './SalaryRangeInput';
 import { ChevronRight, Loader2 } from 'lucide-react';
+import { CelebrationModal } from '@/components/achievements/CelebrationModal';
+import type { CelebrationData } from '@/types/achievements';
 
 interface ApplicationFormDialogProps {
   open: boolean;
@@ -68,6 +70,7 @@ export function ApplicationFormDialog({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [additionalDetailsOpen, setAdditionalDetailsOpen] = useState(false);
+  const [celebrationData, setCelebrationData] = useState<CelebrationData | null>(null);
 
   // Initialize form with React Hook Form + Zod validation
   const form = useForm<CreateApplicationInput>({
@@ -144,6 +147,15 @@ export function ApplicationFormDialog({
           title: 'Success',
           description: 'Application created successfully',
         });
+
+        // Trigger celebration if achievements were unlocked
+        if ('data' in result && result.celebrationData && result.celebrationData.length > 0) {
+          const celebration = result.celebrationData[0];
+          if (celebration) {
+            console.log('Celebration triggered!', celebration);
+            setCelebrationData(celebration); // Show first celebration
+          }
+        }
 
         // Auto-trigger job analysis if job info exists
         const hasJobInfo = cleanedData.job_url || cleanedData.job_description;
@@ -228,8 +240,16 @@ export function ApplicationFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <>
+      {/* Celebration modal (rendered outside main dialog) */}
+      <CelebrationModal
+        celebrationData={celebrationData}
+        onClose={() => setCelebrationData(null)}
+      />
+
+      {/* Main application form dialog */}
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Application</DialogTitle>
           <DialogDescription>
@@ -537,5 +557,6 @@ export function ApplicationFormDialog({
         </Form>
       </DialogContent>
     </Dialog>
+    </>
   );
 }

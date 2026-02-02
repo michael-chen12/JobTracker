@@ -55,6 +55,15 @@ const config: Config = {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
+  		},
+  		keyframes: {
+  			confetti: {
+  				'0%': { transform: 'translateY(-100vh) rotate(0deg)', opacity: '1' },
+  				'100%': { transform: 'translateY(100vh) rotate(720deg)', opacity: '0' }
+  			}
+  		},
+  		animation: {
+  			confetti: 'confetti 3s ease-out forwards'
   		}
   	}
   },

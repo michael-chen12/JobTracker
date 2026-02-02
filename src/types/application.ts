@@ -9,6 +9,7 @@ export type UserEducation = Database['public']['Tables']['user_education']['Row'
 export type Application = Database['public']['Tables']['applications']['Row'];
 export type ApplicationNote = Database['public']['Tables']['application_notes']['Row'];
 export type ApplicationDocument = Database['public']['Tables']['application_documents']['Row'];
+export type Achievement = Database['public']['Tables']['achievements']['Row'];
 
 export type Contact = Database['public']['Tables']['contacts']['Row'];
 export type ContactInteraction = Database['public']['Tables']['contact_interactions']['Row'];
@@ -90,6 +91,7 @@ export interface ApplicationWithRelations extends Application {
   notes: ApplicationNote[];
   documents: ApplicationDocument[];
   milestones: Milestone[];
+  achievements?: Achievement[]; // Optional achievements array
 }
 
 export interface UserWithProfile extends User {

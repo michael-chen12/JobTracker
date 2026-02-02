@@ -4,6 +4,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { ApplicationRow } from './columns';
 import { SortableApplicationCard } from './SortableApplicationCard';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface KanbanColumnProps {
   id: string;
@@ -37,28 +38,30 @@ export function KanbanColumn({ id, title, applications, color }: KanbanColumnPro
       </div>
 
       {/* Cards Container */}
-      <div
+      <ScrollArea
         ref={setNodeRef}
-        className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[calc(100vh-400px)]"
+        className="flex-1 max-h-[calc(100vh-400px)]"
       >
-        <SortableContext
-          items={applications.map((app) => app.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          {applications.length === 0 ? (
-            <div className="text-center py-8 text-gray-400 dark:text-gray-600 text-sm">
-              No applications
-            </div>
-          ) : (
-            applications.map((application) => (
-              <SortableApplicationCard
-                key={application.id}
-                application={application}
-              />
-            ))
-          )}
-        </SortableContext>
-      </div>
+        <div className="p-4 space-y-3">
+          <SortableContext
+            items={applications.map((app) => app.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {applications.length === 0 ? (
+              <div className="text-center py-8 text-gray-400 dark:text-gray-600 text-sm">
+                No applications
+              </div>
+            ) : (
+              applications.map((application) => (
+                <SortableApplicationCard
+                  key={application.id}
+                  application={application}
+                />
+              ))
+            )}
+          </SortableContext>
+        </div>
+      </ScrollArea>
     </div>
   );
 }

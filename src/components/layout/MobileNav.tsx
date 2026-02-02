@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, LayoutDashboard, BarChart3, Users, UserCircle } from 'lucide-react';
+import { Menu, X, LayoutDashboard, BarChart3, Trophy, Users, UserCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/dashboard/wins', label: 'Wins', icon: Trophy },
   { href: '/dashboard/contacts', label: 'Contacts', icon: Users },
   { href: '/dashboard/profile', label: 'Profile', icon: UserCircle },
 ];

@@ -12,8 +12,74 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          achieved_at: string
+          achievement_type: string
+          celebrated: boolean
+          created_at: string
+          id: string
+          metadata: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          achieved_at?: string
+          achievement_type: string
+          celebrated?: boolean
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          achieved_at?: string
+          achievement_type?: string
+          celebrated?: boolean
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_usage: {
         Row: {
           cost_estimate: number | null
@@ -168,6 +234,7 @@ export type Database = {
           notes_summary: Json | null
           position: string
           priority: string | null
+          referral_contact_id: string | null
           referral_name: string | null
           salary_range: Json | null
           source: string | null
@@ -194,6 +261,7 @@ export type Database = {
           notes_summary?: Json | null
           position: string
           priority?: string | null
+          referral_contact_id?: string | null
           referral_name?: string | null
           salary_range?: Json | null
           source?: string | null
@@ -220,6 +288,7 @@ export type Database = {
           notes_summary?: Json | null
           position?: string
           priority?: string | null
+          referral_contact_id?: string | null
           referral_name?: string | null
           salary_range?: Json | null
           source?: string | null
@@ -229,6 +298,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "applications_referral_contact_id_fkey"
+            columns: ["referral_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "applications_user_id_fkey"
             columns: ["user_id"]
@@ -280,11 +356,13 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          last_interaction_date: string | null
           linkedin_url: string | null
           name: string
           notes: string | null
           phone: string | null
           position: string | null
+          tags: string[] | null
           updated_at: string
           user_id: string
         }
@@ -294,11 +372,13 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          last_interaction_date?: string | null
           linkedin_url?: string | null
           name: string
           notes?: string | null
           phone?: string | null
           position?: string | null
+          tags?: string[] | null
           updated_at?: string
           user_id: string
         }
@@ -308,11 +388,13 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          last_interaction_date?: string | null
           linkedin_url?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
           position?: string | null
+          tags?: string[] | null
           updated_at?: string
           user_id?: string
         }
@@ -838,6 +920,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

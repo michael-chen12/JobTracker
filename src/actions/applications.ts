@@ -10,6 +10,8 @@ import {
   type UpdateApplicationInput,
   type CreateNoteInput,
 } from '@/schemas/application';
+import { detectAndCelebrateAchievements } from './achievements';
+import type { CelebrationData } from '@/types/achievements';
 
 const APPLICATIONS_CACHE_TAG = 'applications';
 const APPLICATIONS_CACHE_REVALIDATE = 30;
@@ -78,7 +80,14 @@ export async function createApplication(data: CreateApplicationInput) {
     revalidateTag(APPLICATIONS_CACHE_TAG, 'max');
     revalidateTag('contacts', 'max');
 
-    return { data: application };
+    // Detect achievements after creating application
+    console.log('Detecting achievements...');
+    const achievementResult = await detectAndCelebrateAchievements(application.id);
+    const celebrationData: CelebrationData[] =
+      achievementResult.data?.celebrationData || [];
+    console.log('Achievement detection completed:', celebrationData.length, 'celebrations');
+
+    return { data: application, celebrationData };
   } catch (error) {
     console.error('Exception in createApplication:', error);
     return { error: 'Failed to create application' };
@@ -122,7 +131,12 @@ export async function updateApplication(id: string, data: UpdateApplicationInput
     revalidateTag(APPLICATIONS_CACHE_TAG, 'max');
     revalidateTag('contacts', 'max');
 
-    return { data: application };
+    // Detect achievements after status change
+    const achievementResult = await detectAndCelebrateAchievements(id);
+    const celebrationData: CelebrationData[] =
+      achievementResult.data?.celebrationData || [];
+
+    return { data: application, celebrationData };
   } catch (error) {
     console.error('Error updating application:', error);
     return { error: 'Failed to update application' };
