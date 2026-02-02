@@ -18,36 +18,51 @@ import type {
   InsightsResult,
 } from '@/types/insights';
 
+// Detection thresholds
+const BURNOUT_MIN_APPLICATIONS = 10;
+const BURNOUT_REJECTION_THRESHOLD = 0.8;
+const BURNOUT_LOOKBACK_DAYS = 30;
+const BASELINE_WEEKS = 8;
+const PACING_ABOVE_THRESHOLD = 120; // 120% of baseline
+const PACING_BELOW_THRESHOLD = 80;  // 80% of baseline
+
 /**
  * Detect burnout based on rejection rate in the last 30 days
  *
  * Burnout detection criteria:
- * - At least 10 applications in the last 30 days
- * - Rejection rate > 80%
+ * - At least BURNOUT_MIN_APPLICATIONS in the last BURNOUT_LOOKBACK_DAYS
+ * - Rejection rate > BURNOUT_REJECTION_THRESHOLD
  * - Excludes withdrawn applications
  */
 export function detectBurnout(applications: Application[]): BurnoutDetection {
   const now = new Date();
-  const thirtyDaysAgo = subDays(now, 30);
+  const lookbackDate = subDays(now, BURNOUT_LOOKBACK_DAYS);
 
-  // Filter applications from last 30 days (excluding withdrawn)
+  // Filter applications from last BURNOUT_LOOKBACK_DAYS (excluding withdrawn)
   const recentApps = applications.filter((app) => {
+    if (!app.created_at) return false; // Defensive null check
     const createdAt = new Date(app.created_at);
-    const isRecent = createdAt >= thirtyDaysAgo;
+    const isRecent = createdAt >= lookbackDate;
     const notWithdrawn = app.status !== 'withdrawn';
     return isRecent && notWithdrawn;
   });
 
   const recentApplicationsCount = recentApps.length;
   const rejectionsCount = recentApps.filter((app) => app.status === 'rejected').length;
-  const rejectionRate = recentApplicationsCount > 0 ? rejectionsCount / recentApplicationsCount : 0;
 
-  // Burnout is detected if there are at least 10 applications and rejection rate > 80%
-  const hasHighRejectionRate = recentApplicationsCount >= 10 && rejectionRate > 0.8;
+  // Input validation: prevent division by zero
+  const rejectionRate = recentApplicationsCount > 0
+    ? rejectionsCount / recentApplicationsCount
+    : 0;
+
+  // Burnout is detected if there are at least BURNOUT_MIN_APPLICATIONS and rejection rate > BURNOUT_REJECTION_THRESHOLD
+  const hasHighRejectionRate =
+    recentApplicationsCount >= BURNOUT_MIN_APPLICATIONS &&
+    rejectionRate > BURNOUT_REJECTION_THRESHOLD;
 
   return {
     hasHighRejectionRate,
-    rejectionRate,
+    rejectionRate, // Keep raw value for accuracy; rounding is done in display layer
     recentApplicationsCount,
     rejectionsCount,
   };
@@ -60,6 +75,12 @@ export function detectBurnout(applications: Application[]): BurnoutDetection {
  * - Applications created this week
  * - Notes created this week
  * - Status changes this week (detected by looking at application update timestamps)
+ *
+ * @note Status change detection has limitations:
+ * - Only detects changes where updated_at differs from created_at
+ * - Cannot distinguish between status changes and other field updates
+ * - Multiple status changes to the same application are counted as one
+ * This is a reasonable approximation given the database schema constraints.
  */
 export function calculateWeeklyActivity(
   applications: Application[],
@@ -71,12 +92,14 @@ export function calculateWeeklyActivity(
 
   // Count applications created this week
   const appsThisWeek = applications.filter((app) => {
+    if (!app.created_at) return false; // Defensive null check
     const createdAt = new Date(app.created_at);
     return isWithinInterval(createdAt, { start: weekStart, end: weekEnd });
   });
 
   // Count notes created this week
   const notesThisWeek = notes.filter((note) => {
+    if (!note.created_at) return false; // Defensive null check
     const createdAt = new Date(note.created_at);
     return isWithinInterval(createdAt, { start: weekStart, end: weekEnd });
   });
@@ -84,7 +107,7 @@ export function calculateWeeklyActivity(
   // Count status changes this week
   // We detect status changes by checking if updated_at is this week and different from created_at
   const statusChanges = applications.filter((app) => {
-    if (!app.updated_at) return false;
+    if (!app.updated_at || !app.created_at) return false; // Defensive null check
     const updatedAt = new Date(app.updated_at);
     const createdAt = new Date(app.created_at);
     const updatedThisWeek = isWithinInterval(updatedAt, { start: weekStart, end: weekEnd });
@@ -102,7 +125,7 @@ export function calculateWeeklyActivity(
 }
 
 /**
- * Calculate baseline pacing over the last 8 weeks
+ * Calculate baseline pacing over the last BASELINE_WEEKS weeks
  *
  * Returns:
  * - Average weekly applications
@@ -112,44 +135,53 @@ export function calculateWeeklyActivity(
  */
 export function calculateBaseline(applications: Application[]): BaselinePacing {
   const now = new Date();
-  const eightWeeksAgo = subWeeks(now, 8);
+  const lookbackDate = subWeeks(now, BASELINE_WEEKS);
   const weekStart = startOfWeek(now, { weekStartsOn: 0 });
   const weekEnd = endOfWeek(now, { weekStartsOn: 0 });
 
-  // Get applications from last 8 weeks
+  // Get applications from last BASELINE_WEEKS weeks
   const recentApps = applications.filter((app) => {
+    if (!app.created_at) return false; // Defensive null check
     const createdAt = new Date(app.created_at);
-    return createdAt >= eightWeeksAgo;
+    return createdAt >= lookbackDate;
   });
 
   // Calculate number of weeks we have data for
-  let weeksAnalyzed = 8;
+  let weeksAnalyzed = BASELINE_WEEKS;
   if (recentApps.length > 0) {
-    const oldestAppDate = new Date(
-      Math.min(...recentApps.map((app) => new Date(app.created_at).getTime()))
-    );
-    const actualWeeks = differenceInWeeks(now, oldestAppDate);
-    weeksAnalyzed = Math.min(actualWeeks + 1, 8); // +1 to include current week
+    const appDates = recentApps
+      .filter(app => app.created_at) // Additional null check for safety
+      .map(app => new Date(app.created_at).getTime());
+
+    // Input validation: handle empty arrays
+    if (appDates.length > 0) {
+      const oldestAppDate = new Date(Math.min(...appDates));
+      const actualWeeks = differenceInWeeks(now, oldestAppDate);
+      weeksAnalyzed = Math.min(actualWeeks + 1, BASELINE_WEEKS); // +1 to include current week
+    }
   }
 
   // Calculate average weekly applications
+  // Input validation: prevent division by zero
   const averageWeeklyApplications =
     weeksAnalyzed > 0 ? recentApps.length / weeksAnalyzed : 0;
 
   // Count applications in current week
   const currentWeekApplications = applications.filter((app) => {
+    if (!app.created_at) return false; // Defensive null check
     const createdAt = new Date(app.created_at);
     return isWithinInterval(createdAt, { start: weekStart, end: weekEnd });
   }).length;
 
   // Calculate percentage of baseline
+  // Input validation: prevent division by zero
   const percentageOfBaseline =
     averageWeeklyApplications > 0
       ? Math.round((currentWeekApplications / averageWeeklyApplications) * 100)
       : 0;
 
   return {
-    averageWeeklyApplications: Math.round(averageWeeklyApplications * 10) / 10, // Round to 1 decimal
+    averageWeeklyApplications: Math.round(averageWeeklyApplications * 10) / 10, // Standardized rounding to 1 decimal
     weeksAnalyzed,
     currentWeekApplications,
     percentageOfBaseline,
@@ -169,11 +201,11 @@ export function generateInsights(
   // Insight 1: Burnout Warning
   if (burnout.hasHighRejectionRate) {
     insights.push({
-      id: `insight-burnout-${Date.now()}`,
+      id: crypto.randomUUID(),
       type: 'burnout_warning',
       severity: 'warning',
       title: 'High Rejection Rate Detected',
-      message: `You've received ${burnout.rejectionsCount} rejections out of ${burnout.recentApplicationsCount} applications (${Math.round(burnout.rejectionRate * 100)}%) in the last 30 days. Consider refining your approach or taking a short break.`,
+      message: `You've received ${burnout.rejectionsCount} rejections out of ${burnout.recentApplicationsCount} applications (${Math.round(burnout.rejectionRate * 10) / 10 * 100}%) in the last ${BURNOUT_LOOKBACK_DAYS} days. Consider refining your approach or taking a short break.`,
       icon: 'AlertTriangle',
       iconColor: 'text-orange-500',
       createdAt: new Date(),
@@ -187,7 +219,7 @@ export function generateInsights(
 
   // Insight 2: Weekly Summary
   insights.push({
-    id: `insight-weekly-${Date.now()}`,
+    id: crypto.randomUUID(),
     type: 'weekly_summary',
     severity: 'info',
     title: 'This Week\'s Activity',
@@ -204,12 +236,12 @@ export function generateInsights(
 
   // Insight 3: Pacing Suggestion
   if (baseline.averageWeeklyApplications > 0) {
-    const isAboveBaseline = baseline.percentageOfBaseline > 120;
-    const isBelowBaseline = baseline.percentageOfBaseline < 80;
+    const isAboveBaseline = baseline.percentageOfBaseline > PACING_ABOVE_THRESHOLD;
+    const isBelowBaseline = baseline.percentageOfBaseline < PACING_BELOW_THRESHOLD;
 
     if (isAboveBaseline) {
       insights.push({
-        id: `insight-pacing-above-${Date.now()}`,
+        id: crypto.randomUUID(),
         type: 'pacing_suggestion',
         severity: 'info',
         title: 'Above Your Baseline',
@@ -225,7 +257,7 @@ export function generateInsights(
       });
     } else if (isBelowBaseline) {
       insights.push({
-        id: `insight-pacing-below-${Date.now()}`,
+        id: crypto.randomUUID(),
         type: 'pacing_suggestion',
         severity: 'info',
         title: 'Below Your Baseline',
