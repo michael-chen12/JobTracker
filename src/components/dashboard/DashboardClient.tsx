@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ApplicationFormDialog } from '@/components/applications/ApplicationFormDialog';
 import { ApplicationsTable } from '@/components/applications/ApplicationsTable';
 import { KanbanBoard } from '@/components/applications/KanbanBoard';
+import { YourJourneySection } from '@/components/journey/YourJourneySection';
 import { Plus, LayoutGrid, Table as TableIcon } from 'lucide-react';
 import type { ApplicationRow } from '@/components/applications/columns';
 import { getApplications, type GetApplicationsParams } from '@/actions/applications';
@@ -151,6 +152,11 @@ export function DashboardClient({
               {offerApplications}
             </p>
           </div>
+        </div>
+
+        {/* Your Journey Section */}
+        <div className="mb-8">
+          <YourJourneySection />
         </div>
 
         {/* Applications View */}
