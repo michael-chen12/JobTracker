@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { AnalyticsData, DateRangeFilter } from '@/types/analytics';
+import type { InsightsResult } from '@/types/insights';
 import { MetricCard } from './MetricCard';
 import { ApplicationTrendsChart } from './ApplicationTrendsChart';
 import { StatusDistributionChart } from './StatusDistributionChart';
 import { ApplicationFunnelChart } from './ApplicationFunnelChart';
 import { DateRangeSelector } from './DateRangeSelector';
+import { WeeklyActivitySummary } from './WeeklyActivitySummary';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { getInsights } from '@/actions/insights';
 
 interface AnalyticsDashboardProps {
   initialData: AnalyticsData;
@@ -18,6 +21,27 @@ export function AnalyticsDashboard({ initialData, initialRange }: AnalyticsDashb
   const [dateRange, setDateRange] = useState<DateRangeFilter>(initialRange);
   const [data, setData] = useState<AnalyticsData>(initialData);
   const [isLoading, setIsLoading] = useState(false);
+  const [insights, setInsights] = useState<InsightsResult | null>(null);
+  const [insightsLoading, setInsightsLoading] = useState(true);
+
+  // Fetch insights on mount
+  useEffect(() => {
+    const fetchInsights = async () => {
+      setInsightsLoading(true);
+      try {
+        const result = await getInsights();
+        if (result.data) {
+          setInsights(result.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch insights:', error);
+      } finally {
+        setInsightsLoading(false);
+      }
+    };
+
+    fetchInsights();
+  }, []);
 
   const handleDateRangeChange = async (range: DateRangeFilter) => {
     setDateRange(range);
@@ -59,6 +83,14 @@ export function AnalyticsDashboard({ initialData, initialRange }: AnalyticsDashb
               <p className="text-sm text-muted-foreground">Loading analytics...</p>
             </div>
           </div>
+        )}
+
+        {/* Weekly Activity Summary */}
+        {!insightsLoading && insights && (
+          <WeeklyActivitySummary
+            weeklyActivity={insights.weeklyActivity}
+            baseline={insights.baseline}
+          />
         )}
 
         {/* Metrics Cards */}
