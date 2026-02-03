@@ -14,7 +14,9 @@ import { detectAndCelebrateAchievements } from './achievements';
 import type { CelebrationData } from '@/types/achievements';
 
 const APPLICATIONS_CACHE_TAG = 'applications';
-const APPLICATIONS_CACHE_REVALIDATE = 30;
+// Extend cache to 5 minutes for better performance (data doesn't change that frequently)
+// Users can manually refresh or mutations will invalidate cache via tags
+const APPLICATIONS_CACHE_REVALIDATE = 300; // 5 minutes
 
 /**
  * Create a new job application
@@ -210,7 +212,7 @@ const getApplicationsCached = unstable_cache(
       .select(
         `
         *,
-        notes:application_notes(*),
+        notes:application_notes(id),
         referral_contact:contacts!referral_contact_id(id, name)
       `,
         { count: 'exact' }
@@ -253,11 +255,18 @@ const getApplicationsCached = unstable_cache(
 
     // Transform response to include referral contact details
     const transformedApplications =
-      applications?.map((app) => ({
-        ...app,
-        referral_contact_id: app.referral_contact?.id || null,
-        referral_contact_name: app.referral_contact?.name || null,
-      })) || [];
+      applications?.map((app) => {
+        // Handle referral_contact which could be null, an object, or an array
+        const referralContact = Array.isArray(app.referral_contact)
+          ? app.referral_contact[0]
+          : app.referral_contact;
+
+        return {
+          ...app,
+          referral_contact_id: referralContact?.id || null,
+          referral_contact_name: referralContact?.name || null,
+        };
+      }) || [];
 
     return {
       data: transformedApplications,
@@ -270,7 +279,10 @@ const getApplicationsCached = unstable_cache(
     };
   },
   ['applications-list'],
-  { revalidate: APPLICATIONS_CACHE_REVALIDATE, tags: [APPLICATIONS_CACHE_TAG] }
+  {
+    revalidate: APPLICATIONS_CACHE_REVALIDATE,
+    tags: [APPLICATIONS_CACHE_TAG],
+  }
 );
 
 const getApplicationCached = unstable_cache(

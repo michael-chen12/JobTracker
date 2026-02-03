@@ -1,15 +1,42 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
-import { ApplicationFormDialog } from '@/components/applications/ApplicationFormDialog';
 import { ApplicationsTable } from '@/components/applications/ApplicationsTable';
-import { KanbanBoard } from '@/components/applications/KanbanBoard';
-import { YourJourneySection } from '@/components/journey/YourJourneySection';
 import { Plus, LayoutGrid, Table as TableIcon } from 'lucide-react';
 import type { ApplicationRow } from '@/components/applications/columns';
 import { getApplications, type GetApplicationsParams } from '@/actions/applications';
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Lazy load heavy components to reduce initial bundle size
+const ApplicationFormDialog = dynamic(
+  () => import('@/components/applications/ApplicationFormDialog').then((mod) => ({ default: mod.ApplicationFormDialog })),
+  {
+    loading: () => null, // Dialog doesn't need loading state
+    ssr: false, // Client-side only component
+  }
+);
+
+const KanbanBoard = dynamic(
+  () => import('@/components/applications/KanbanBoard').then((mod) => ({ default: mod.KanbanBoard })),
+  {
+    loading: () => (
+      <div className="space-y-4">
+        <Skeleton className="h-96 w-full" />
+      </div>
+    ),
+    ssr: false, // Drag-and-drop is client-side only
+  }
+);
+
+const YourJourneySection = dynamic(
+  () => import('@/components/journey/YourJourneySection').then((mod) => ({ default: mod.YourJourneySection })),
+  {
+    loading: () => <Skeleton className="h-48 w-full" />,
+  }
+);
 
 interface DashboardClientProps {
   userName: string;
@@ -85,19 +112,29 @@ export function DashboardClient({
     [filters]
   );
 
-  const totalApplications = initialPagination.total;
-  const activeApplications = applications.filter(
-    (app) =>
-      app.status === 'applied' ||
-      app.status === 'screening' ||
-      app.status === 'interviewing'
-  ).length;
-  const interviewingApplications = applications.filter(
-    (app) => app.status === 'interviewing'
-  ).length;
-  const offerApplications = applications.filter(
-    (app) => app.status === 'offer'
-  ).length;
+  // Memoize expensive stats calculations to prevent recalculation on every render
+  const stats = useMemo(() => {
+    const totalApplications = initialPagination.total;
+    const activeApplications = applications.filter(
+      (app) =>
+        app.status === 'applied' ||
+        app.status === 'screening' ||
+        app.status === 'interviewing'
+    ).length;
+    const interviewingApplications = applications.filter(
+      (app) => app.status === 'interviewing'
+    ).length;
+    const offerApplications = applications.filter(
+      (app) => app.status === 'offer'
+    ).length;
+
+    return {
+      total: totalApplications,
+      active: activeApplications,
+      interviewing: interviewingApplications,
+      offers: offerApplications,
+    };
+  }, [applications, initialPagination.total]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -125,7 +162,7 @@ export function DashboardClient({
               Total Applications
             </h3>
             <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
-              {totalApplications}
+              {stats.total}
             </p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
@@ -133,7 +170,7 @@ export function DashboardClient({
               Active
             </h3>
             <p className="mt-2 text-3xl font-bold text-blue-600 dark:text-blue-400">
-              {activeApplications}
+              {stats.active}
             </p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
@@ -141,7 +178,7 @@ export function DashboardClient({
               Interviews
             </h3>
             <p className="mt-2 text-3xl font-bold text-green-600 dark:text-green-400">
-              {interviewingApplications}
+              {stats.interviewing}
             </p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
@@ -149,7 +186,7 @@ export function DashboardClient({
               Offers
             </h3>
             <p className="mt-2 text-3xl font-bold text-purple-600 dark:text-purple-400">
-              {offerApplications}
+              {stats.offers}
             </p>
           </div>
         </div>
@@ -195,7 +232,7 @@ export function DashboardClient({
             </div>
           )}
 
-          {!error && totalApplications === 0 && !loading ? (
+          {!error && stats.total === 0 && !loading ? (
             <div className="px-6 py-12 text-center">
               <p className="text-gray-500 dark:text-gray-400 mb-4">
                 No applications yet. Start tracking your job search!

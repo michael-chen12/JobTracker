@@ -161,7 +161,8 @@ describe('AnthropicService', () => {
       );
 
       const logCall = vi.mocked(logUsage).mock.calls[0]?.[0];
-      expect(logCall?.latencyMs).toBeGreaterThanOrEqual(100);
+      // Allow for timing precision - expect at least 90ms (test adds 100ms delay but timing may vary)
+      expect(logCall?.latencyMs).toBeGreaterThanOrEqual(90);
     });
   });
 

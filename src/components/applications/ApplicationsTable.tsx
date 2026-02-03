@@ -5,9 +5,10 @@ import {
   getCoreRowModel,
   getSortedRowModel,
   SortingState,
+  RowSelectionState,
   useReactTable,
 } from '@tanstack/react-table';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Table,
@@ -21,6 +22,7 @@ import { columns, type ApplicationRow } from './columns';
 import { TableToolbar } from './TableToolbar';
 import { TablePagination } from './TablePagination';
 import { Skeleton } from '@/components/ui/skeleton';
+import { BulkActionsToolbar } from './BulkActionsToolbar';
 
 interface ApplicationsTableProps {
   data: ApplicationRow[];
@@ -46,23 +48,61 @@ export function ApplicationsTable({
 }: ApplicationsTableProps) {
   const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
-  const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    onSortingChange: setSorting,
-    state: {
-      sorting,
-    },
-    manualPagination: true,
-    pageCount: pagination.totalPages,
-  });
+  // Memoize table config to prevent recreation on every render
+  const tableConfig = useMemo(
+    () => ({
+      data,
+      columns,
+      getCoreRowModel: getCoreRowModel(),
+      getSortedRowModel: getSortedRowModel(),
+      onSortingChange: setSorting,
+      onRowSelectionChange: setRowSelection,
+      enableRowSelection: true,
+      state: {
+        sorting,
+        rowSelection,
+      },
+      manualPagination: true,
+      pageCount: pagination.totalPages,
+    }),
+    [data, sorting, rowSelection, pagination.totalPages]
+  );
+
+  const table = useReactTable(tableConfig);
+
+  // Clear selection on page change
+  useEffect(() => {
+    setRowSelection({});
+  }, [pagination.page]);
+
+  // Calculate selected IDs and count
+  const selectedRows = table.getFilteredSelectedRowModel().rows;
+  const selectedIds = selectedRows.map((row) => row.original.id);
+  const selectedCount = selectedIds.length;
+
+  const handleClearSelection = () => {
+    setRowSelection({});
+  };
+
+  const handleOperationComplete = () => {
+    setRowSelection({});
+    // Optionally trigger a data refresh here if needed
+  };
 
   return (
     <div className="space-y-4">
-      <TableToolbar onFilterChange={onFilterChange} />
+      {selectedCount > 0 ? (
+        <BulkActionsToolbar
+          selectedIds={selectedIds}
+          selectedCount={selectedCount}
+          onClearSelection={handleClearSelection}
+          onOperationComplete={handleOperationComplete}
+        />
+      ) : (
+        <TableToolbar onFilterChange={onFilterChange} />
+      )}
 
       <div className="rounded-md border border-gray-200 dark:border-gray-700">
         <Table>
@@ -88,6 +128,9 @@ export function ApplicationsTable({
               Array.from({ length: 5 }).map((_, index) => (
                 <TableRow key={`skeleton-${index}`}>
                   <TableCell>
+                    <Skeleton className="h-4 w-4" />
+                  </TableCell>
+                  <TableCell>
                     <Skeleton className="h-4 w-32" />
                   </TableCell>
                   <TableCell>
@@ -112,7 +155,11 @@ export function ApplicationsTable({
                 <TableRow
                   key={row.id}
                   onClick={() => router.push(`/dashboard/applications/${row.original.id}`)}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
+                  className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer ${
+                    row.getIsSelected()
+                      ? 'bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+                      : ''
+                  }`}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

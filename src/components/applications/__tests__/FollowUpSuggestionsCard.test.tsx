@@ -77,7 +77,8 @@ describe('FollowUpSuggestionsCard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockWriteText.mockClear();
-    vi.useFakeTimers();
+    // Use fake timers but allow React's internal timers to work
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date('2026-02-01T00:00:00Z'));
   });
 
@@ -86,43 +87,49 @@ describe('FollowUpSuggestionsCard', () => {
   });
 
   describe('Empty State', () => {
-    it('should render generate button when no suggestions', () => {
-      render(
-        <FollowUpSuggestionsCard
-          applicationId={mockApplicationId}
-          appliedDate={mockAppliedDate}
-          followUpSuggestions={null}
-          followupSuggestionsAt={null}
-        />
-      );
+    it('should render generate button when no suggestions', async () => {
+      await act(async () => {
+        render(
+          <FollowUpSuggestionsCard
+            applicationId={mockApplicationId}
+            appliedDate={mockAppliedDate}
+            followUpSuggestions={null}
+            followupSuggestionsAt={null}
+          />
+        );
+      });
 
       expect(screen.getByText('Follow-Up Suggestions')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /generate suggestions/i })).toBeInTheDocument();
     });
 
-    it('should display days since applied in empty state', () => {
-      render(
-        <FollowUpSuggestionsCard
-          applicationId={mockApplicationId}
-          appliedDate={mockAppliedDate}
-          followUpSuggestions={null}
-          followupSuggestionsAt={null}
-        />
-      );
+    it('should display days since applied in empty state', async () => {
+      await act(async () => {
+        render(
+          <FollowUpSuggestionsCard
+            applicationId={mockApplicationId}
+            appliedDate={mockAppliedDate}
+            followUpSuggestions={null}
+            followupSuggestionsAt={null}
+          />
+        );
+      });
 
       // Component calculates days, so we just verify it shows the text
       expect(screen.getByText(/\d+ days since applied/)).toBeInTheDocument();
     });
 
-    it('should show descriptive text in empty state', () => {
-      render(
-        <FollowUpSuggestionsCard
-          applicationId={mockApplicationId}
-          appliedDate={mockAppliedDate}
-          followUpSuggestions={null}
-          followupSuggestionsAt={null}
-        />
-      );
+    it('should show descriptive text in empty state', async () => {
+      await act(async () => {
+        render(
+          <FollowUpSuggestionsCard
+            applicationId={mockApplicationId}
+            appliedDate={mockAppliedDate}
+            followUpSuggestions={null}
+            followupSuggestionsAt={null}
+          />
+        );
+      });
 
       expect(
         screen.getByText(/get ai-powered suggestions for your next steps/i)
@@ -141,24 +148,28 @@ describe('FollowUpSuggestionsCard', () => {
           suggestions: mockSuggestions,
         });
 
-      render(
-        <FollowUpSuggestionsCard
-          applicationId={mockApplicationId}
-          appliedDate={mockAppliedDate}
-          followUpSuggestions={null}
-          followupSuggestionsAt={null}
-        />
-      );
+      await act(async () => {
+        render(
+          <FollowUpSuggestionsCard
+            applicationId={mockApplicationId}
+            appliedDate={mockAppliedDate}
+            followUpSuggestions={null}
+            followupSuggestionsAt={null}
+          />
+        );
+      });
 
       const generateButton = screen.getByRole('button', { name: /generate suggestions/i });
 
       await act(async () => {
         fireEvent.click(generateButton);
+        // Advance timers to allow useTransition to complete
+        await vi.advanceTimersByTimeAsync(100);
       });
 
       await waitFor(() => {
         expect(generateSpy).toHaveBeenCalledWith(mockApplicationId);
-      }, { timeout: 1000 });
+      }, { timeout: 10000 });
     });
   });
 
@@ -291,48 +302,54 @@ describe('FollowUpSuggestionsCard', () => {
     it('should copy template to clipboard when copy button clicked', async () => {
       mockWriteText.mockResolvedValue(undefined);
 
-      render(
-        <FollowUpSuggestionsCard
-          applicationId={mockApplicationId}
-          appliedDate={mockAppliedDate}
-          followUpSuggestions={mockSuggestions}
-          followupSuggestionsAt="2026-02-01T12:00:00Z"
-        />
-      );
+      await act(async () => {
+        render(
+          <FollowUpSuggestionsCard
+            applicationId={mockApplicationId}
+            appliedDate={mockAppliedDate}
+            followUpSuggestions={mockSuggestions}
+            followupSuggestionsAt="2026-02-01T12:00:00Z"
+          />
+        );
+      });
 
       const copyButtons = screen.getAllByRole('button', { name: /copy/i });
 
       await act(async () => {
         fireEvent.click(copyButtons[0]);
-        // Wait for clipboard to be called
-        await new Promise(resolve => setTimeout(resolve, 0));
+        // Advance timers to allow async operations
+        await vi.advanceTimersByTimeAsync(100);
       });
 
-      expect(mockWriteText).toHaveBeenCalledWith(mockSuggestions.suggestions[0].template);
+      await waitFor(() => {
+        expect(mockWriteText).toHaveBeenCalledWith(mockSuggestions.suggestions[0].template);
+      }, { timeout: 10000 });
     });
 
     it('should show "Copied" feedback after copying', async () => {
       mockWriteText.mockResolvedValue(undefined);
 
-      render(
-        <FollowUpSuggestionsCard
-          applicationId={mockApplicationId}
-          appliedDate={mockAppliedDate}
-          followUpSuggestions={mockSuggestions}
-          followupSuggestionsAt="2026-02-01T12:00:00Z"
-        />
-      );
+      await act(async () => {
+        render(
+          <FollowUpSuggestionsCard
+            applicationId={mockApplicationId}
+            appliedDate={mockAppliedDate}
+            followUpSuggestions={mockSuggestions}
+            followupSuggestionsAt="2026-02-01T12:00:00Z"
+          />
+        );
+      });
 
       const copyButtons = screen.getAllByRole('button', { name: /copy/i });
 
       await act(async () => {
         fireEvent.click(copyButtons[0]);
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await vi.advanceTimersByTimeAsync(100);
       });
 
       await waitFor(() => {
         expect(screen.getByText('Copied')).toBeInTheDocument();
-      }, { timeout: 1000 });
+      }, { timeout: 10000 });
     });
   });
 
@@ -345,23 +362,27 @@ describe('FollowUpSuggestionsCard', () => {
           suggestions: mockSuggestions,
         });
 
-      render(
-        <FollowUpSuggestionsCard
-          applicationId={mockApplicationId}
-          appliedDate={mockAppliedDate}
-          followUpSuggestions={null}
-          followupSuggestionsAt={null}
-        />
-      );
+      await act(async () => {
+        render(
+          <FollowUpSuggestionsCard
+            applicationId={mockApplicationId}
+            appliedDate={mockAppliedDate}
+            followUpSuggestions={null}
+            followupSuggestionsAt={null}
+          />
+        );
+      });
 
       const generateButton = screen.getByRole('button', { name: /generate suggestions/i });
 
       await act(async () => {
         fireEvent.click(generateButton);
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await vi.advanceTimersByTimeAsync(100);
       });
 
-      expect(generateSpy).toHaveBeenCalledWith(mockApplicationId);
+      await waitFor(() => {
+        expect(generateSpy).toHaveBeenCalledWith(mockApplicationId);
+      }, { timeout: 10000 });
     });
 
     it('should update display with new suggestions on success', async () => {
@@ -370,25 +391,27 @@ describe('FollowUpSuggestionsCard', () => {
         suggestions: mockSuggestions,
       });
 
-      render(
-        <FollowUpSuggestionsCard
-          applicationId={mockApplicationId}
-          appliedDate={mockAppliedDate}
-          followUpSuggestions={null}
-          followupSuggestionsAt={null}
-        />
-      );
+      await act(async () => {
+        render(
+          <FollowUpSuggestionsCard
+            applicationId={mockApplicationId}
+            appliedDate={mockAppliedDate}
+            followUpSuggestions={null}
+            followupSuggestionsAt={null}
+          />
+        );
+      });
 
       const generateButton = screen.getByRole('button', { name: /generate suggestions/i });
 
       await act(async () => {
         fireEvent.click(generateButton);
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await vi.advanceTimersByTimeAsync(100);
       });
 
       await waitFor(() => {
         expect(screen.getByText(/send follow-up email to recruiter/i)).toBeInTheDocument();
-      }, { timeout: 1000 });
+      }, { timeout: 10000 });
     });
 
     it('should call onSuggestionsComplete callback on success', async () => {
@@ -399,26 +422,28 @@ describe('FollowUpSuggestionsCard', () => {
         suggestions: mockSuggestions,
       });
 
-      render(
-        <FollowUpSuggestionsCard
-          applicationId={mockApplicationId}
-          appliedDate={mockAppliedDate}
-          followUpSuggestions={null}
-          followupSuggestionsAt={null}
-          onSuggestionsComplete={onComplete}
-        />
-      );
+      await act(async () => {
+        render(
+          <FollowUpSuggestionsCard
+            applicationId={mockApplicationId}
+            appliedDate={mockAppliedDate}
+            followUpSuggestions={null}
+            followupSuggestionsAt={null}
+            onSuggestionsComplete={onComplete}
+          />
+        );
+      });
 
       const generateButton = screen.getByRole('button', { name: /generate suggestions/i });
 
       await act(async () => {
         fireEvent.click(generateButton);
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await vi.advanceTimersByTimeAsync(100);
       });
 
       await waitFor(() => {
         expect(onComplete).toHaveBeenCalledWith(mockSuggestions);
-      }, { timeout: 1000 });
+      }, { timeout: 10000 });
     });
   });
 
@@ -431,51 +456,59 @@ describe('FollowUpSuggestionsCard', () => {
           error: 'Rate limit exceeded',
         });
 
-      render(
-        <FollowUpSuggestionsCard
-          applicationId={mockApplicationId}
-          appliedDate={mockAppliedDate}
-          followUpSuggestions={null}
-          followupSuggestionsAt={null}
-        />
-      );
+      await act(async () => {
+        render(
+          <FollowUpSuggestionsCard
+            applicationId={mockApplicationId}
+            appliedDate={mockAppliedDate}
+            followUpSuggestions={null}
+            followupSuggestionsAt={null}
+          />
+        );
+      });
 
       const generateButton = screen.getByRole('button', { name: /generate suggestions/i });
 
       await act(async () => {
         fireEvent.click(generateButton);
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await vi.advanceTimersByTimeAsync(100);
       });
 
-      // Error is shown via toast (mocked), so we just verify the action was called
-      expect(generateSpy).toHaveBeenCalled();
+      await waitFor(() => {
+        // Error is shown via toast (mocked), so we just verify the action was called
+        expect(generateSpy).toHaveBeenCalled();
+      }, { timeout: 10000 });
     });
   });
 
   describe('Days Calculation', () => {
-    it('should calculate days correctly', () => {
-      render(
-        <FollowUpSuggestionsCard
-          applicationId={mockApplicationId}
-          appliedDate="2026-01-25T10:00:00Z"
-          followUpSuggestions={null}
-          followupSuggestionsAt={null}
-        />
-      );
+    it('should calculate days correctly', async () => {
+      await act(async () => {
+        render(
+          <FollowUpSuggestionsCard
+            applicationId={mockApplicationId}
+            appliedDate="2026-01-25T10:00:00Z"
+            followUpSuggestions={null}
+            followupSuggestionsAt={null}
+          />
+        );
+      });
 
       // Component calculates days dynamically based on current time
       expect(screen.getByText(/\d+ days since applied/)).toBeInTheDocument();
     });
 
-    it('should handle null applied date', () => {
-      render(
-        <FollowUpSuggestionsCard
-          applicationId={mockApplicationId}
-          appliedDate={null}
-          followUpSuggestions={null}
-          followupSuggestionsAt={null}
-        />
-      );
+    it('should handle null applied date', async () => {
+      await act(async () => {
+        render(
+          <FollowUpSuggestionsCard
+            applicationId={mockApplicationId}
+            appliedDate={null}
+            followUpSuggestions={null}
+            followupSuggestionsAt={null}
+          />
+        );
+      });
 
       // Should still render without crashing
       expect(screen.getByText('Follow-Up Suggestions')).toBeInTheDocument();

@@ -1,16 +1,43 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import type { AnalyticsData, DateRangeFilter } from '@/types/analytics';
 import type { InsightsResult } from '@/types/insights';
 import { MetricCard } from './MetricCard';
-import { ApplicationTrendsChart } from './ApplicationTrendsChart';
-import { StatusDistributionChart } from './StatusDistributionChart';
-import { ApplicationFunnelChart } from './ApplicationFunnelChart';
 import { DateRangeSelector } from './DateRangeSelector';
-import { WeeklyActivitySummary } from './WeeklyActivitySummary';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { getInsights } from '@/actions/insights';
+
+// Lazy load chart components (they use recharts which is ~100KB)
+const ApplicationTrendsChart = dynamic(
+  () => import('./ApplicationTrendsChart').then((mod) => ({ default: mod.ApplicationTrendsChart })),
+  {
+    loading: () => <Skeleton className="h-80 w-full" />,
+  }
+);
+
+const StatusDistributionChart = dynamic(
+  () => import('./StatusDistributionChart').then((mod) => ({ default: mod.StatusDistributionChart })),
+  {
+    loading: () => <Skeleton className="h-80 w-full" />,
+  }
+);
+
+const ApplicationFunnelChart = dynamic(
+  () => import('./ApplicationFunnelChart').then((mod) => ({ default: mod.ApplicationFunnelChart })),
+  {
+    loading: () => <Skeleton className="h-80 w-full" />,
+  }
+);
+
+const WeeklyActivitySummary = dynamic(
+  () => import('./WeeklyActivitySummary').then((mod) => ({ default: mod.WeeklyActivitySummary })),
+  {
+    loading: () => <Skeleton className="h-32 w-full" />,
+  }
+);
 
 interface AnalyticsDashboardProps {
   initialData: AnalyticsData;

@@ -527,28 +527,36 @@ export function calculateBaseScore(
 const MATCH_ADJUSTMENT_SYSTEM_PROMPT = `You are a career advisor reviewing a job match analysis.
 
 Your task:
-1. Review the base match score and its breakdown
-2. Identify contextual factors the formula couldn't capture
-3. Adjust the score by -10 to +10 points (be conservative)
+1. FIRST: Carefully extract ALL technical and non-technical skills from the job description
+   - Don't rely on keyword matching - read and understand the full context
+   - Include specific frameworks, tools, methodologies, soft skills, domain knowledge
+   - Include synonyms and related skills (e.g., if job mentions "React", consider "React.js" and vice versa)
+
+2. SECOND: Compare against the user's skills with intelligent matching
+   - Match exact skills and close synonyms (e.g., "Node.js" matches "Node", "JavaScript" matches "JS")
+   - Consider related skills (e.g., someone with "React" likely knows "HTML/CSS")
+   - Identify transferable skills not directly mentioned
+
+3. THIRD: Review the base match score and its breakdown
+   - Identify contextual factors the formula couldn't capture
+   - Adjust the score by -10 to +10 points (be conservative)
+   - Consider career trajectory, industry transitions, overqualified/underqualified status
+
 4. Provide detailed analysis with actionable insights
 
-Consider:
-- Career trajectory alignment (upward progression, lateral move, step back)
-- Transferable skills not captured by keyword matching
-- Red flags (overqualified, underqualified, career gaps)
-- Cultural fit indicators from job description
-- Industry transitions (related vs. unrelated)
+CRITICAL: Your skill extraction is authoritative. The matching_skills and missing_skills arrays you return
+will replace the base scorer's results. Be thorough and accurate.
 
 Return ONLY valid JSON matching this schema:
 {
   "adjusted_score": number (0-100),
   "adjustment": number (-10 to +10),
   "reasoning": string,
-  "matching_skills": string[],
-  "missing_skills": string[],
-  "strengths": string[],
-  "concerns": string[],
-  "recommendations": string[]
+  "matching_skills": string[] (ALL skills from user profile that match job requirements),
+  "missing_skills": string[] (ALL skills required by job that user doesn't have),
+  "strengths": string[] (specific advantages this candidate has),
+  "concerns": string[] (specific gaps or red flags),
+  "recommendations": string[] (actionable advice for this specific job)
 }`;
 
 /**
@@ -582,24 +590,34 @@ export async function adjustScoreWithClaude(
 
   const userMessage = `BASE MATCH SCORE: ${baseScore.total}/100
 
-BREAKDOWN:
-- Skills: ${baseScore.skills_score}/40 (${baseScore.matching_skills.length}/${baseScore.matching_skills.length + baseScore.missing_skills.length} match)
+BREAKDOWN (from formula-based calculation):
+- Skills: ${baseScore.skills_score}/40 (${baseScore.matching_skills.length}/${baseScore.matching_skills.length + baseScore.missing_skills.length} detected matches)
 - Experience: ${baseScore.experience_score}/30 (${Math.round(baseScore.user_relevant_years || 0)} years relevant, ${baseScore.required_years || 0} required)
 - Education: ${baseScore.education_score}/15 (${baseScore.user_highest_degree || 'none'} vs ${baseScore.required_degree || 'none'} required)
 - Other: ${baseScore.other_score}/15
 
+NOTE: The base skill matching used keyword matching against a limited skill list. You should do a more thorough analysis.
+
 USER PROFILE:
 Skills: ${userProfile.skills.join(', ')}
+
 Experience:
 ${formatExperience(userProfile.experience)}
 
 Education:
 ${formatEducation(userProfile.education)}
 
-JOB REQUIREMENTS:
+JOB DESCRIPTION:
 ${jobDetails.description.slice(0, 3000)}
 
-Analyze and adjust the score.`;
+${jobDetails.description.length > 3000 ? '...(truncated)' : ''}
+
+INSTRUCTIONS:
+1. Extract ALL skills from the job description (technical, soft skills, domain knowledge, etc.)
+2. Intelligently match them against the user's skills (including synonyms and related skills)
+3. Be thorough - don't miss any skills mentioned in the job description
+4. Provide accurate matching_skills and missing_skills arrays
+5. Adjust the score and provide analysis`;
 
   try {
     const response = await anthropic.createMessage(
@@ -655,13 +673,24 @@ Analyze and adjust the score.`;
       Math.min(100, baseScore.total + adjustment)
     );
 
+    // Validate that Claude provided skill arrays (they should always be present)
+    if (!analysisData.matching_skills || !analysisData.missing_skills) {
+      console.warn('Claude did not return skill arrays, falling back to base scorer');
+    }
+
     return {
       base_score: baseScore.total,
       adjusted_score,
       adjustment,
       reasoning: analysisData.reasoning,
-      matching_skills: analysisData.matching_skills || baseScore.matching_skills,
-      missing_skills: analysisData.missing_skills || baseScore.missing_skills,
+      // ALWAYS use Claude's skill extraction (it's authoritative and intelligent)
+      // Only fall back to base scorer if Claude completely failed to provide them
+      matching_skills: analysisData.matching_skills && analysisData.matching_skills.length > 0
+        ? analysisData.matching_skills
+        : baseScore.matching_skills,
+      missing_skills: analysisData.missing_skills && analysisData.missing_skills.length > 0
+        ? analysisData.missing_skills
+        : baseScore.missing_skills,
       strengths: analysisData.strengths || [],
       concerns: analysisData.concerns || [],
       recommendations: analysisData.recommendations || [],
@@ -681,12 +710,16 @@ Analyze and adjust the score.`;
       adjusted_score: baseScore.total,
       adjustment: 0,
       reasoning:
-        'Base score calculated without AI adjustment due to processing error.',
+        'Base score calculated without AI adjustment due to processing error. Note: Skill matching may be incomplete as it relied on keyword matching only.',
       matching_skills: baseScore.matching_skills,
       missing_skills: baseScore.missing_skills,
-      strengths: ['Calculated based on objective criteria'],
-      concerns: [],
-      recommendations: ['Review the base score breakdown for details'],
+      strengths: ['Calculated based on objective formula-based criteria'],
+      concerns: ['AI analysis unavailable - skill matching may be incomplete'],
+      recommendations: [
+        'Try re-analyzing to get AI-powered skill matching',
+        'Review the skill lists carefully as they may be incomplete',
+        'Consider the base score breakdown for objective metrics'
+      ],
       breakdown: {
         skills_score: baseScore.skills_score,
         experience_score: baseScore.experience_score,

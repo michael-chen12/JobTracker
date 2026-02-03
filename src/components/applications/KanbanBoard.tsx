@@ -56,16 +56,18 @@ export function KanbanBoard({ applications, loading = false }: KanbanBoardProps)
   const [activeId, setActiveId] = useState<string | null>(null);
   const [celebrationData, setCelebrationData] = useState<CelebrationData | null>(null);
 
-  const buildColumns = useCallback((apps: ApplicationRow[]) => {
-    return COLUMNS.reduce(
-      (acc, column) => {
-        acc[column.id] = apps
-          .filter((app) => app.status === column.id)
-          .slice(0, 50); // Limit to 50 per column for performance
-        return acc;
-      },
-      {} as Record<string, ApplicationRow[]>
-    );
+  // Memoize column building to avoid recalculating on every render
+  const buildColumns = useMemo(() => {
+    return (apps: ApplicationRow[]) =>
+      COLUMNS.reduce(
+        (acc, column) => {
+          acc[column.id] = apps
+            .filter((app) => app.status === column.id)
+            .slice(0, 50); // Limit to 50 per column for performance
+          return acc;
+        },
+        {} as Record<string, ApplicationRow[]>
+      );
   }, []);
 
   const [columns, setColumns] = useState<Record<string, ApplicationRow[]>>(() =>
@@ -81,6 +83,7 @@ export function KanbanBoard({ applications, loading = false }: KanbanBoardProps)
     })
   );
 
+  // Only rebuild columns when applications data actually changes
   useEffect(() => {
     setColumns(buildColumns(applications));
   }, [applications, buildColumns]);
