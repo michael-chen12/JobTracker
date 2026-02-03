@@ -162,7 +162,7 @@ export function FilterPresets({ currentFilters, onLoadPreset }: FilterPresetsPro
   const canSave = hasActiveFilters(currentFilters);
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       {/* Save Current Filters Button */}
       <Popover open={showSaveForm} onOpenChange={setShowSaveForm}>
         <PopoverTrigger asChild>

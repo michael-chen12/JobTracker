@@ -15,7 +15,7 @@ export default async function DashboardLayout({
   } = await supabase.auth.getUser();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-full bg-gray-50 dark:bg-gray-900 flex flex-col">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -46,7 +46,7 @@ export default async function DashboardLayout({
       </header>
 
       {/* Main content */}
-      <main>{children}</main>
+      <main className="flex-1 min-h-0">{children}</main>
     </div>
   );
 }

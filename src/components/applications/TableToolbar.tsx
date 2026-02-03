@@ -133,17 +133,17 @@ export function TableToolbar({ onFilterChange }: TableToolbarProps) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex flex-1 items-center gap-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <Input
-            placeholder="Search by company or position..."
-            value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2 lg:flex-1">
+          <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              placeholder="Search by company or position..."
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-10"
+            />
+          </div>
 
         <Popover>
           <PopoverTrigger asChild>
@@ -232,11 +232,15 @@ export function TableToolbar({ onFilterChange }: TableToolbarProps) {
           </PopoverContent>
         </Popover>
 
-        {hasFilters && (
-          <Button variant="ghost" onClick={handleClearFilters} className="gap-2">
-            Clear all filters
-          </Button>
-        )}
+          {hasFilters && (
+            <Button
+              variant="ghost"
+              onClick={handleClearFilters}
+              className="w-full gap-2 sm:w-auto"
+            >
+              Clear all filters
+            </Button>
+          )}
         </div>
 
         {/* Filter Presets */}

@@ -4,7 +4,7 @@ import { FileQuestion } from 'lucide-react';
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+    <div className="min-h-full bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
       <div className="text-center">
         <FileQuestion className="h-24 w-24 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">

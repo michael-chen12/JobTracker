@@ -26,14 +26,14 @@ export function TablePagination({
   }
 
   return (
-    <div className="flex items-center justify-between px-2">
-      <div className="text-sm text-gray-600 dark:text-gray-400">
+    <div className="flex flex-col gap-3 px-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="text-sm text-gray-600 dark:text-gray-400 text-center sm:text-left">
         Showing <span className="font-medium">{startItem}</span> to{' '}
         <span className="font-medium">{endItem}</span> of{' '}
         <span className="font-medium">{totalItems}</span> applications
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
         <Button
           variant="outline"
           size="sm"
