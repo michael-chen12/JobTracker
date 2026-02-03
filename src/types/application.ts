@@ -19,6 +19,16 @@ export type Milestone = Database['public']['Tables']['milestones']['Row'];
 export type AIUsage = Database['public']['Tables']['ai_usage']['Row'];
 export type Insight = Database['public']['Tables']['insights']['Row'];
 
+// Manual Tag type definition (until database types are regenerated)
+export type Tag = {
+  id: string;
+  user_id: string;
+  name: string;
+  color: string;
+  created_at: string;
+  updated_at: string;
+};
+
 // Insert types (for creating new records)
 export type UserInsert = Database['public']['Tables']['users']['Insert'];
 export type ApplicationInsert = Database['public']['Tables']['applications']['Insert'];
@@ -92,6 +102,10 @@ export interface ApplicationWithRelations extends Application {
   documents: ApplicationDocument[];
   milestones: Milestone[];
   achievements?: Achievement[]; // Optional achievements array
+}
+
+export interface ApplicationWithTags extends Application {
+  tags: Tag[];
 }
 
 export interface UserWithProfile extends User {

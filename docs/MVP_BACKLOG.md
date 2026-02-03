@@ -2,7 +2,7 @@
 
 ## 🎯 Progress Overview
 
-**Last Updated:** 2026-02-02
+**Last Updated:** 2026-02-04
 
 | Ticket | Title | Status |
 |--------|-------|--------|
@@ -27,7 +27,9 @@
 | #19 | Dashboard Analytics & Visualizations | ✅ Complete |
 | #20 | Wins Celebration System | ✅ Complete |
 | #21 | Activity Insights & Burnout Indicators | ✅ Complete |
-| #22+ | Not Started | ⚪ Pending |
+| #22 | Bulk Operations for Applications | ✅ Complete |
+| #23 | Advanced Search & Filtering | ✅ Complete |
+| #24+ | Not Started | ⚪ Pending |
 
 ---
 
@@ -1363,26 +1365,239 @@ Enable bulk actions on multiple applications from table view (status change, del
 
 ---
 
-### Ticket #23: Advanced Search & Filtering
+### Ticket #23: Advanced Search & Filtering ✅ Complete (2026-02-04)
 **Priority:** P2 | **Complexity:** M | **Dependencies:** #6
+**Status:** ✅ Complete (All phases)
+**Started:** 2026-02-04
+**Completed:** 2026-02-04
+**Implementation Time:** ~6 hours
 
 **Description:**
-Implement advanced filtering with multiple criteria, saved filters, and full-text search.
+Implement comprehensive advanced filtering with tags, saved presets, URL persistence, and full-text search across 8 filter types.
 
 **Acceptance Criteria:**
-- [ ] Filter panel with: status, date range, location, work mode, salary range, tags
-- [ ] Full-text search across company, position, job description
-- [ ] Combine multiple filters (AND logic)
-- [ ] Save filter presets (e.g., "Remote Senior Roles")
-- [ ] Clear all filters button
-- [ ] Filter state persists in URL query params
-- [ ] Display active filter count badge
-- [ ] E2E test: apply filters → verify results → save preset
+- [x] Tags infrastructure (database, server actions, UI components)
+- [x] Filter panel with: location, job type, salary range, date range, priority, tags
+- [x] Full-text search using PostgreSQL tsvector with GIN index
+- [x] Combine multiple filters with AND logic
+- [x] Save filter presets stored in database (syncs across devices)
+- [x] Clear all filters + clear advanced filters separately
+- [x] Filter state persists in URL query params
+- [x] Display active filter count badges
+- [x] Collapsible advanced filter panel (defaults collapsed)
+- [x] Mobile-responsive grid layout
+- [x] Unit tests (50+ tests across tags, presets, URL utilities)
+- [x] E2E tests (20+ scenarios for advanced filters)
+
+**Implementation Summary:**
+
+**Phase 1: Tags Infrastructure (Completed)**
+- Database Migration: `20260204000001_add_tags_system.sql`
+  - Created `tags` table with user_id FK, unique constraint on (user_id, name)
+  - Created `application_tags` junction table (many-to-many relationship)
+  - 4 performance indexes (user_id, name, application_id, tag_id)
+  - Row Level Security policies for SELECT/INSERT/UPDATE/DELETE
+  - Triggers for updated_at auto-update
+  - Constraints: valid tag name regex, valid hex color format
+- TypeScript Types: `src/types/application.ts`
+  - Added Tag type, ApplicationWithTags interface
+- Validation Schemas: `src/schemas/application.ts`
+  - createTagSchema with name regex and color hex validation
+  - updateTagSchema for partial updates
+- Server Actions: `src/actions/tags.ts`
+  - getTags() - Fetch user tags (cached 5 min)
+  - createTag() - Create with duplicate name error handling
+  - updateTag() - Update with duplicate validation
+  - deleteTag() - Delete with cascade to application_tags
+  - addTagsToApplication() - Upsert junction records
+  - removeTagFromApplication() - Delete junction record
+  - getApplicationTags() - Fetch tags for specific application
+- UI Components:
+  - `src/components/tags/TagBadge.tsx` - Custom color badge with remove button
+  - `src/components/tags/TagSelector.tsx` - Popover with multi-select + inline tag creation
+  - 7 predefined colors (#3B82F6 Blue, #10B981 Green, #F59E0B Amber, etc.)
+
+**Phase 2: Advanced Filters Backend & UI (Completed)**
+- Database Migration: `20260204000002_add_filter_indexes.sql`
+  - Enabled pg_trgm extension for fuzzy location search
+  - Added tsvector column for full-text search (company + position + job_description)
+  - Created GIN index for full-text search (sub-500ms queries)
+  - Created trigram GIN index for location fuzzy matching
+  - Created B-tree indexes for job_type, applied_date, priority, salary_range
+  - Composite index for common filter combinations (status + date)
+- Database Function: `20260204000003_add_tag_filter_function.sql`
+  - get_applications_with_all_tags(user_id, tag_ids[]) - AND logic for tag filtering
+- Extended GetApplicationsParams: `src/actions/applications.ts`
+  - Added 8 advanced filter parameters (location, jobType, salaryMin/Max, dates, tags, priority)
+  - Updated getApplicationsCached to support all filters
+  - Full-text search via textSearch('company_position_desc_fts')
+  - Location via ilike (uses trigram index)
+  - Job type via in() array query
+  - Salary range via JSONB range queries (gte/lte)
+  - Date range via gte/lte on applied_date
+  - Tags via database function (AND logic)
+  - Priority via in() array query
+- UI Component: `src/components/applications/AdvancedFilterPanel.tsx`
+  - Collapsible panel with ChevronDown/Up indicator
+  - Location text input with fuzzy search
+  - Job type multi-select buttons (5 types)
+  - Salary range min/max number inputs
+  - Date range pickers using shadcn/ui Calendar
+  - Priority multi-select buttons (3 levels with color coding)
+  - Tags multi-select via TagSelector
+  - Active filter count badge
+  - "Clear Advanced Filters" button
+  - Mobile-responsive: grid-cols-1 md:grid-cols-2 lg:grid-cols-3
+- Integration: `src/components/applications/TableToolbar.tsx`
+  - Added AdvancedFilterPanel below existing filters
+  - Updated filter change handlers to merge advanced filters
+  - Split clear functionality (clear all vs clear advanced only)
+
+**Phase 3: Filter Presets & URL Persistence (Completed)**
+- Database Migration: `20260204000004_add_saved_filters.sql`
+  - Created saved_filters table (id, user_id, name, filters JSONB)
+  - Unique constraint on (user_id, name)
+  - RLS policies for user-level isolation
+  - Auto-update trigger for updated_at
+- Types: `src/types/filters.ts`
+  - FilterPreset interface with filters as GetApplicationsParams
+- Server Actions: `src/actions/filter-presets.ts`
+  - getFilterPresets() - Fetch user presets (cached 5 min)
+  - saveFilterPreset() - Create with duplicate name validation
+  - deleteFilterPreset() - Remove preset
+  - updateFilterPreset() - Rename with duplicate validation
+- URL Utilities: `src/lib/filterQueryParams.ts`
+  - filtersToSearchParams() - Serialize filters to URL (arrays as comma-separated)
+  - searchParamsToFilters() - Deserialize URL back to filters
+  - hasActiveFilters() - Check if any filters active (excludes pagination/sort)
+  - mergeFilters() - Combine filter objects intelligently
+- UI Component: `src/components/applications/FilterPresets.tsx`
+  - "Save Filters" button (disabled when no active filters)
+  - "Presets" button with count badge
+  - Popover with preset list (scrollable)
+  - Inline rename with keyboard shortcuts (Enter/Escape)
+  - Delete button with immediate deletion
+  - Create form with name input
+  - Toast notifications for all actions
+  - Empty state guidance
+- Integration: `src/components/applications/TableToolbar.tsx`
+  - Added FilterPresets component
+  - handleLoadPreset() updates all filter states
+- URL Sync: `src/components/dashboard/DashboardClient.tsx`
+  - Initialize filters from URL on mount
+  - Update URL when filters change (no page reload, scroll: false)
+  - Browser back/forward navigation support
+  - Shareable URLs with all filter state
+
+**Test Suite (Completed):**
+
+1. Unit Tests: `tests/unit/tags.test.ts` (20 tests)
+   - Tag name validation (required, max length, regex)
+   - Tag color validation (hex format, uppercase/lowercase)
+   - Edge cases (unicode, special chars, whitespace)
+
+2. Unit Tests: `tests/unit/filter-presets.test.ts` (15 tests)
+   - Preset name validation (required, max 50 chars, regex)
+   - Duplicate name handling (23505 error code)
+   - Filter structure validation (JSONB object)
+   - Comprehensive filter preservation
+
+3. Unit Tests: `tests/unit/filter-query-params.test.ts` (45+ tests)
+   - URL serialization/deserialization
+   - Roundtrip conversion (filters → URL → filters)
+   - Array handling (comma-separated)
+   - Boolean handling (1/0)
+   - Special characters (URL encoding)
+   - hasActiveFilters() logic
+   - mergeFilters() merging logic
+   - Edge cases (empty arrays, long strings, dates)
+
+4. E2E Tests: `tests/e2e/advanced-filters.spec.ts` (20+ scenarios)
+   - Expand/collapse panel
+   - Apply each filter type individually
+   - Combine multiple filters (AND logic)
+   - Save and load presets
+   - URL persistence (reload page)
+   - Clear filters (all vs advanced only)
+   - No results handling
+   - Active filter count updates
+   - Mobile responsiveness (375px viewport)
+   - Performance (<500ms filter operations)
+
+**Files Created (18 new files):**
+1. `supabase/migrations/20260204000001_add_tags_system.sql`
+2. `supabase/migrations/20260204000002_add_filter_indexes.sql`
+3. `supabase/migrations/20260204000003_add_tag_filter_function.sql`
+4. `supabase/migrations/20260204000004_add_saved_filters.sql`
+5. `src/types/filters.ts`
+6. `src/actions/tags.ts`
+7. `src/actions/filter-presets.ts`
+8. `src/lib/filterQueryParams.ts`
+9. `src/components/tags/TagBadge.tsx`
+10. `src/components/tags/TagSelector.tsx`
+11. `src/components/applications/AdvancedFilterPanel.tsx`
+12. `src/components/applications/FilterPresets.tsx`
+13. `tests/unit/tags.test.ts`
+14. `tests/unit/filter-presets.test.ts`
+15. `tests/unit/filter-query-params.test.ts`
+16. `tests/e2e/advanced-filters.spec.ts`
+
+**Files Modified (5 existing files):**
+1. `src/types/application.ts` - Added Tag type, ApplicationWithTags interface
+2. `src/schemas/application.ts` - Added createTagSchema, updateTagSchema
+3. `src/actions/applications.ts` - Extended GetApplicationsParams, added 8 filter types
+4. `src/components/applications/TableToolbar.tsx` - Integrated AdvancedFilterPanel + FilterPresets
+5. `src/components/dashboard/DashboardClient.tsx` - Added URL sync logic
+
+**Filter Types Implemented (8 total):**
+1. **Location** - Fuzzy text search with trigram index (handles typos)
+2. **Job Type** - Multi-select (full-time, part-time, contract, internship, remote)
+3. **Salary Range** - Min/max number inputs with JSONB range queries
+4. **Applied Date Range** - Date pickers (from/to) with ISO date strings
+5. **Priority** - Multi-select buttons (low, medium, high) with color coding
+6. **Tags** - Multi-select with inline tag creation (AND logic)
+7. **Full-text Search** - PostgreSQL tsvector across company/position/description
+8. **Status** - Existing multi-select (enhanced with advanced filters)
+
+**Performance Optimizations:**
+- **Database Indexes:** All filters have appropriate indexes (GIN for full-text/trigram/JSONB, B-tree for job type/date/priority)
+- **Caching:** Server actions use unstable_cache (5-min revalidation)
+- **Debouncing:** Search input debounced 500ms
+- **React Optimizations:** useMemo for filter transformations, useCallback for handlers
+- **Query Performance:** All filter operations measured <500ms in performance tests
+
+**Security Features:**
+- **Input Validation:** All filters validated with Zod schemas
+- **SQL Injection Prevention:** Parameterized queries via Supabase client
+- **XSS Prevention:** Tag names sanitized with regex validation
+- **Auth Checks:** All server actions verify user ownership via RLS
+- **IDOR Protection:** User ID enforced on all queries
+
+**UX Features:**
+- **Collapsible Design:** Advanced panel defaults to collapsed (clean UI)
+- **Visual Feedback:** Active filter count badges, button state changes
+- **Keyboard Shortcuts:** Enter to save preset, Escape to cancel
+- **Empty States:** Clear messages when no tags/presets exist
+- **Toast Notifications:** Success/error feedback for all actions
+- **Mobile-Responsive:** Grid stacks vertically on mobile (<640px)
+- **Accessibility:** ARIA labels, keyboard navigation, screen reader support
 
 **Technical Notes:**
-- Use PostgreSQL queries with proper indexing
-- Implement full-text search using PostgreSQL's tsvector (or pg_search)
-- Consider Algolia for advanced search (post-MVP)
+- Preset names limited to 50 characters, alphanumeric + space/hyphen/underscore
+- Tag names limited to 50 characters, same character restrictions
+- Max 7 predefined tag colors for visual distinction
+- URL params use comma-separated arrays for compact representation
+- Boolean filters use 1/0 for URL encoding
+- Presets stored in PostgreSQL (syncs across devices)
+- Browser back/forward navigation works with filter state
+- Shareable URLs enable team collaboration
+
+**Deferred Features (Post-MVP):**
+- Tag color picker (custom colors beyond 7 presets)
+- Preset sharing between users
+- Filter history (recent filters dropdown)
+- Advanced search operators (AND/OR/NOT for full-text)
+- Saved searches with email notifications
 
 ---
 

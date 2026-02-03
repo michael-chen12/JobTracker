@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { ApplicationsTable } from '@/components/applications/ApplicationsTable';
@@ -9,6 +9,7 @@ import { Plus, LayoutGrid, Table as TableIcon } from 'lucide-react';
 import type { ApplicationRow } from '@/components/applications/columns';
 import { getApplications, type GetApplicationsParams } from '@/actions/applications';
 import { Skeleton } from '@/components/ui/skeleton';
+import { filtersToSearchParams, searchParamsToFilters } from '@/lib/filterQueryParams';
 
 // Lazy load heavy components to reduce initial bundle size
 const ApplicationFormDialog = dynamic(
@@ -62,7 +63,9 @@ export function DashboardClient({
   const [filters, setFilters] = useState<GetApplicationsParams>({});
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
+  const [isInitialized, setIsInitialized] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Load view preference from localStorage on mount
   useEffect(() => {
@@ -71,6 +74,36 @@ export function DashboardClient({
       setViewMode(savedView);
     }
   }, []);
+
+  // Initialize filters from URL on mount
+  useEffect(() => {
+    if (!isInitialized) {
+      const urlFilters = searchParamsToFilters(searchParams);
+      // Only apply URL filters if there are any
+      const hasUrlFilters = Object.keys(urlFilters).length > 0;
+
+      if (hasUrlFilters) {
+        setFilters(urlFilters);
+        // Fetch applications with URL filters
+        setLoading(true);
+        getApplications(urlFilters)
+          .then((result) => {
+            if ('data' in result && 'pagination' in result) {
+              setApplications(result.data);
+              setPagination(result.pagination);
+            }
+          })
+          .catch((err) => {
+            console.error('Error fetching applications from URL filters:', err);
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      }
+
+      setIsInitialized(true);
+    }
+  }, [isInitialized, searchParams]);
 
   // Save view preference to localStorage
   const handleViewChange = (mode: 'table' | 'kanban') => {
@@ -91,6 +124,11 @@ export function DashboardClient({
       const updatedFilters = { ...filters, ...newFilters };
       setFilters(updatedFilters);
 
+      // Update URL with new filters (without page reload)
+      const params = filtersToSearchParams(updatedFilters);
+      const newUrl = params.toString() ? `?${params.toString()}` : '/dashboard';
+      router.push(newUrl, { scroll: false });
+
       // Show loading skeleton immediately
       setLoading(true);
 
@@ -109,7 +147,7 @@ export function DashboardClient({
           setLoading(false);
         });
     },
-    [filters]
+    [filters, router]
   );
 
   // Memoize expensive stats calculations to prevent recalculation on every render

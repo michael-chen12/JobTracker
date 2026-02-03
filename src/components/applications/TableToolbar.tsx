@@ -10,9 +10,16 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useDebounce } from '@/hooks/useDebounce';
+import { AdvancedFilterPanel, type AdvancedFilters } from './AdvancedFilterPanel';
+import { FilterPresets } from './FilterPresets';
+import type { GetApplicationsParams } from '@/actions/applications';
 
 interface TableToolbarProps {
-  onFilterChange: (filters: { search?: string; status?: string[]; hasReferral?: boolean }) => void;
+  onFilterChange: (filters: {
+    search?: string;
+    status?: string[];
+    hasReferral?: boolean;
+  } & AdvancedFilters) => void;
 }
 
 const statusOptions = [
@@ -30,6 +37,7 @@ export function TableToolbar({ onFilterChange }: TableToolbarProps) {
   const [search, setSearch] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [hasReferral, setHasReferral] = useState<boolean | undefined>(undefined);
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({});
   const debouncedSearch = useDebounce(search, 500);
   const prevDebouncedSearchRef = useRef(debouncedSearch);
 
@@ -37,7 +45,12 @@ export function TableToolbar({ onFilterChange }: TableToolbarProps) {
   useEffect(() => {
     if (prevDebouncedSearchRef.current !== debouncedSearch) {
       prevDebouncedSearchRef.current = debouncedSearch;
-      onFilterChange({ search: debouncedSearch, status: selectedStatuses, hasReferral });
+      onFilterChange({
+        search: debouncedSearch,
+        status: selectedStatuses,
+        hasReferral,
+        ...advancedFilters,
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch]); // Intentionally omit onFilterChange and selectedStatuses to prevent infinite loop
@@ -52,7 +65,12 @@ export function TableToolbar({ onFilterChange }: TableToolbarProps) {
       : [...selectedStatuses, status];
 
     setSelectedStatuses(newStatuses);
-    onFilterChange({ search: debouncedSearch, status: newStatuses, hasReferral });
+    onFilterChange({
+      search: debouncedSearch,
+      status: newStatuses,
+      hasReferral,
+      ...advancedFilters,
+    });
   };
 
   const handleReferralChange = (value: boolean | undefined) => {
@@ -61,21 +79,62 @@ export function TableToolbar({ onFilterChange }: TableToolbarProps) {
       search: debouncedSearch,
       status: selectedStatuses,
       hasReferral: value,
+      ...advancedFilters,
     });
+  };
+
+  const handleAdvancedFiltersChange = (newAdvancedFilters: AdvancedFilters) => {
+    setAdvancedFilters(newAdvancedFilters);
+    onFilterChange({
+      search: debouncedSearch,
+      status: selectedStatuses,
+      hasReferral,
+      ...newAdvancedFilters,
+    });
+  };
+
+  const handleLoadPreset = (filters: GetApplicationsParams) => {
+    // Update all filter states from preset
+    setSearch(filters.search || '');
+    setSelectedStatuses(filters.status || []);
+    setHasReferral(filters.hasReferral);
+    setAdvancedFilters({
+      location: filters.location,
+      jobType: filters.jobType,
+      salaryMin: filters.salaryMin,
+      salaryMax: filters.salaryMax,
+      appliedDateFrom: filters.appliedDateFrom,
+      appliedDateTo: filters.appliedDateTo,
+      tags: filters.tags,
+      priority: filters.priority,
+    });
+
+    // Trigger filter change
+    onFilterChange(filters);
   };
 
   const handleClearFilters = () => {
     setSearch('');
     setSelectedStatuses([]);
     setHasReferral(undefined);
-    onFilterChange({ search: '', status: [], hasReferral: undefined });
+    setAdvancedFilters({});
+    onFilterChange({
+      search: '',
+      status: [],
+      hasReferral: undefined,
+    });
   };
 
-  const hasFilters = search.length > 0 || selectedStatuses.length > 0 || hasReferral !== undefined;
+  const hasBasicFilters = search.length > 0 || selectedStatuses.length > 0 || hasReferral !== undefined;
+  const hasAdvancedFilters = Object.values(advancedFilters).some((v) =>
+    Array.isArray(v) ? v.length > 0 : v !== undefined
+  );
+  const hasFilters = hasBasicFilters || hasAdvancedFilters;
 
   return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="flex flex-1 items-center gap-2">
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-1 items-center gap-2">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
@@ -175,10 +234,28 @@ export function TableToolbar({ onFilterChange }: TableToolbarProps) {
 
         {hasFilters && (
           <Button variant="ghost" onClick={handleClearFilters} className="gap-2">
-            Clear filters
+            Clear all filters
           </Button>
         )}
+        </div>
+
+        {/* Filter Presets */}
+        <FilterPresets
+          currentFilters={{
+            search: debouncedSearch,
+            status: selectedStatuses,
+            hasReferral,
+            ...advancedFilters,
+          }}
+          onLoadPreset={handleLoadPreset}
+        />
       </div>
+
+      {/* Advanced Filters Panel */}
+      <AdvancedFilterPanel
+        filters={advancedFilters}
+        onFiltersChange={handleAdvancedFiltersChange}
+      />
     </div>
   );
 }

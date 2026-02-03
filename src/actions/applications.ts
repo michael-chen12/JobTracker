@@ -183,6 +183,7 @@ export async function deleteApplication(id: string) {
 }
 
 export interface GetApplicationsParams {
+  // Existing parameters
   page?: number;
   limit?: number;
   sortBy?: 'company' | 'position' | 'status' | 'applied_date' | 'created_at';
@@ -190,6 +191,16 @@ export interface GetApplicationsParams {
   status?: string[];
   search?: string;
   hasReferral?: boolean;
+
+  // Advanced filter parameters
+  location?: string;
+  jobType?: string[];
+  salaryMin?: number;
+  salaryMax?: number;
+  appliedDateFrom?: string; // ISO date string
+  appliedDateTo?: string; // ISO date string
+  tags?: string[]; // Tag IDs (AND logic - application must have ALL specified tags)
+  priority?: string[];
 }
 
 const getApplicationsCached = unstable_cache(
@@ -202,6 +213,14 @@ const getApplicationsCached = unstable_cache(
       status,
       search,
       hasReferral,
+      location,
+      jobType,
+      salaryMin,
+      salaryMax,
+      appliedDateFrom,
+      appliedDateTo,
+      tags,
+      priority,
     } = params;
 
     const supabase = createAdminClient();
@@ -224,9 +243,12 @@ const getApplicationsCached = unstable_cache(
       query = query.in('status', status);
     }
 
-    // Apply search filter (case-insensitive search on company and position)
+    // Apply full-text search filter (uses GIN index on company_position_desc_fts)
     if (search && search.trim()) {
-      query = query.or(`company.ilike.%${search}%,position.ilike.%${search}%`);
+      query = query.textSearch('company_position_desc_fts', search, {
+        type: 'websearch',
+        config: 'english',
+      });
     }
 
     // Apply referral filter
@@ -235,6 +257,65 @@ const getApplicationsCached = unstable_cache(
         query = query.not('referral_contact_id', 'is', null);
       } else {
         query = query.is('referral_contact_id', null);
+      }
+    }
+
+    // Apply location filter (fuzzy match with trigram index)
+    if (location && location.trim()) {
+      query = query.ilike('location', `%${location}%`);
+    }
+
+    // Apply job type filter
+    if (jobType && jobType.length > 0) {
+      query = query.in('job_type', jobType);
+    }
+
+    // Apply salary range filter
+    if (salaryMin !== undefined || salaryMax !== undefined) {
+      if (salaryMin !== undefined) {
+        // Applications where max salary >= minimum requested
+        query = query.gte('salary_range->max', salaryMin);
+      }
+      if (salaryMax !== undefined) {
+        // Applications where min salary <= maximum requested
+        query = query.lte('salary_range->min', salaryMax);
+      }
+    }
+
+    // Apply applied date range filter
+    if (appliedDateFrom) {
+      query = query.gte('applied_date', appliedDateFrom);
+    }
+    if (appliedDateTo) {
+      query = query.lte('applied_date', appliedDateTo);
+    }
+
+    // Apply priority filter
+    if (priority && priority.length > 0) {
+      query = query.in('priority', priority);
+    }
+
+    // Apply tags filter (AND logic - must have ALL specified tags)
+    if (tags && tags.length > 0) {
+      // Subquery: Find applications that have ALL specified tags
+      const { data: applicationsWithAllTags } = await supabase.rpc('get_applications_with_all_tags', {
+        p_user_id: dbUserId,
+        p_tag_ids: tags,
+      });
+
+      if (applicationsWithAllTags && applicationsWithAllTags.length > 0) {
+        query = query.in('id', applicationsWithAllTags.map((app: any) => app.id));
+      } else {
+        // No applications have all tags - return empty result
+        return {
+          data: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 0,
+          },
+        };
       }
     }
 

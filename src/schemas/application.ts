@@ -89,6 +89,21 @@ export const createContactSchema = z.object({
 
 export const updateContactSchema = createContactSchema.partial();
 
+// Tag creation schema
+export const createTagSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Tag name required')
+    .max(50, 'Max 50 characters')
+    .regex(/^[a-zA-Z0-9\s\-_]+$/, 'Letters, numbers, spaces, hyphens, underscores only'),
+  color: z
+    .string()
+    .regex(/^#[0-9A-F]{6}$/i, 'Invalid hex color')
+    .default('#3B82F6'),
+});
+
+export const updateTagSchema = createTagSchema.partial();
+
 // Type inference from schemas
 export type CreateApplicationInput = z.infer<typeof createApplicationSchema>;
 export type UpdateApplicationInput = z.infer<typeof updateApplicationSchema>;
@@ -96,3 +111,5 @@ export type CreateNoteInput = z.infer<typeof createNoteSchema>;
 export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;
 export type CreateContactInput = z.infer<typeof createContactSchema>;
 export type UpdateContactInput = z.infer<typeof updateContactSchema>;
+export type CreateTagInput = z.infer<typeof createTagSchema>;
+export type UpdateTagInput = z.infer<typeof updateTagSchema>;
