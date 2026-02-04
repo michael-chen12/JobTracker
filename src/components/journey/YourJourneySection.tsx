@@ -99,16 +99,16 @@ export function YourJourneySection() {
   return (
     <Card>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-2">
-            <CollapsibleTrigger className="flex items-center gap-2 hover:opacity-70 transition-opacity flex-1 cursor-pointer">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <CollapsibleTrigger className="flex min-w-0 items-center gap-2 hover:opacity-70 transition-opacity flex-1 cursor-pointer">
               <ChevronDown
                 className={`h-4 w-4 transition-transform ${
                   isOpen ? 'rotate-180' : ''
                 }`}
               />
               <Sparkles className="h-5 w-5 text-purple-500" />
-              <CardTitle className="text-lg">Your Journey</CardTitle>
+              <CardTitle className="text-base sm:text-lg">Your Journey</CardTitle>
             </CollapsibleTrigger>
             {!loading && journeyItems.length > 0 && (
               <Button
@@ -116,6 +116,7 @@ export function YourJourneySection() {
                 size="sm"
                 asChild
                 onClick={(e) => e.stopPropagation()}
+                className="self-start sm:self-auto"
               >
                 <Link href="/dashboard/wins" className="flex items-center gap-1">
                   View All
@@ -127,7 +128,7 @@ export function YourJourneySection() {
         </CardHeader>
 
         <CollapsibleContent>
-          <CardContent>
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
             {/* Loading state */}
             {loading && (
               <div className="space-y-3">

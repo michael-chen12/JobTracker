@@ -13,6 +13,14 @@ export default async function DashboardLayout({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const getInitials = (email?: string | null) => {
+    if (!email) return 'U';
+    const name = email.split('@')[0] ?? email;
+    const parts = name.split(/[^a-zA-Z0-9]+/).filter(Boolean);
+    const initials =
+      parts.length >= 2 ? `${parts[0][0]}${parts[1][0]}` : name.slice(0, 2);
+    return initials.toUpperCase();
+  };
 
   return (
     <div className="min-h-full bg-gray-50 dark:bg-gray-900 flex flex-col">
@@ -34,9 +42,16 @@ export default async function DashboardLayout({
             <div className="flex items-center gap-2 md:gap-4">
               {user && (
                 <>
-                  <span className="hidden sm:block text-sm text-gray-600 dark:text-gray-400 truncate max-w-[150px]">
-                    {user.email}
-                  </span>
+                  <Link
+                    href="/dashboard/profile"
+                    title={user.email ?? undefined}
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-700 ring-1 ring-blue-200 transition hover:bg-blue-200 hover:text-blue-800 dark:bg-blue-900/40 dark:text-blue-200 dark:ring-blue-800"
+                    aria-label="Open profile"
+                  >
+                    <span className="text-xs font-semibold">
+                      {getInitials(user.email)}
+                    </span>
+                  </Link>
                   <SignOutButton />
                 </>
               )}

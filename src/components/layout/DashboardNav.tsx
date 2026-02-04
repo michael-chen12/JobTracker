@@ -10,7 +10,6 @@ const navItems = [
   { href: '/dashboard/analytics', label: 'Analytics' },
   { href: '/dashboard/wins', label: 'Wins' },
   { href: '/dashboard/contacts', label: 'Contacts' },
-  { href: '/dashboard/profile', label: 'Profile' },
 ];
 
 export default function DashboardNav() {
@@ -99,7 +98,7 @@ export default function DashboardNav() {
   };
 
   return (
-    <div className="ml-10 hidden md:block">
+    <div className="ml-10 hidden lg:block">
       <div
         role="progressbar"
         aria-valuemin={0}

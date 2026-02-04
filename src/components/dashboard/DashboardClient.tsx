@@ -64,6 +64,7 @@ export function DashboardClient({
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -73,6 +74,24 @@ export function DashboardClient({
     if (savedView === 'kanban' || savedView === 'table') {
       setViewMode(savedView);
     }
+  }, []);
+
+  // Track mobile breakpoint to force table view
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(max-width: 640px)');
+    const handleChange = (event: MediaQueryListEvent | MediaQueryList) => {
+      setIsMobile(event.matches);
+    };
+
+    handleChange(mediaQuery);
+    if ('addEventListener' in mediaQuery) {
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+
+    mediaQuery.addListener(handleChange);
+    return () => mediaQuery.removeListener(handleChange);
   }, []);
 
   // Initialize filters from URL on mount
@@ -107,6 +126,7 @@ export function DashboardClient({
 
   // Save view preference to localStorage
   const handleViewChange = (mode: 'table' | 'kanban') => {
+    if (isMobile) return;
     setViewMode(mode);
     localStorage.setItem('applicationViewMode', mode);
   };
@@ -174,56 +194,62 @@ export function DashboardClient({
     };
   }, [applications, initialPagination.total]);
 
+  const activeViewMode = isMobile ? 'table' : viewMode;
+
   return (
     <div className="min-h-full bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header with CTA */}
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
               Dashboard
             </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
+            <p className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400">
               Welcome back, {userName}
             </p>
           </div>
-          <Button onClick={() => setDialogOpen(true)} size="lg" className="w-full sm:w-auto">
+          <Button
+            onClick={() => setDialogOpen(true)}
+            size="lg"
+            className="w-full max-w-full sm:w-auto"
+          >
             <Plus className="h-5 w-5 mr-2" />
             New Application
           </Button>
         </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
               Total Applications
             </h3>
-            <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
+            <p className="mt-2 text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
               {stats.total}
             </p>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
               Active
             </h3>
-            <p className="mt-2 text-3xl font-bold text-blue-600 dark:text-blue-400">
+            <p className="mt-2 text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">
               {stats.active}
             </p>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
               Interviews
             </h3>
-            <p className="mt-2 text-3xl font-bold text-green-600 dark:text-green-400">
+            <p className="mt-2 text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-400">
               {stats.interviewing}
             </p>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
               Offers
             </h3>
-            <p className="mt-2 text-3xl font-bold text-purple-600 dark:text-purple-400">
+            <p className="mt-2 text-2xl sm:text-3xl font-bold text-purple-600 dark:text-purple-400">
               {stats.offers}
             </p>
           </div>
@@ -235,16 +261,16 @@ export function DashboardClient({
         </div>
 
         {/* Applications View */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
               Applications
             </h2>
 
             {/* View Toggle */}
-            <div className="flex w-full items-center gap-2 bg-gray-100 dark:bg-gray-900 rounded-lg p-1 sm:w-auto">
+            <div className="hidden w-full items-center gap-2 bg-gray-100 dark:bg-gray-900 rounded-lg p-1 sm:flex sm:w-auto">
               <Button
-                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                variant={activeViewMode === 'table' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => handleViewChange('table')}
                 className="h-8"
@@ -253,7 +279,7 @@ export function DashboardClient({
                 Table
               </Button>
               <Button
-                variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+                variant={activeViewMode === 'kanban' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => handleViewChange('kanban')}
                 className="h-8"
@@ -280,7 +306,7 @@ export function DashboardClient({
                 Create Your First Application
               </Button>
             </div>
-          ) : viewMode === 'table' ? (
+          ) : activeViewMode === 'table' ? (
             <ApplicationsTable
               data={applications}
               pagination={pagination}

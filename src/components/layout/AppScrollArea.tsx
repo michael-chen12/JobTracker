@@ -12,7 +12,11 @@ interface AppScrollAreaProps {
 
 export function AppScrollArea({ children, className }: AppScrollAreaProps) {
   return (
-    <ScrollArea className={cn("h-[100dvh] w-full", className)}>
+    <ScrollArea
+      className={cn("h-[100dvh] w-full", className)}
+      viewportClassName="overflow-x-hidden md:overflow-x-auto"
+      showHorizontal={false}
+    >
       <div className="min-h-[100dvh] w-full">{children}</div>
     </ScrollArea>
   )

@@ -24,6 +24,26 @@ export interface ApplicationRow {
   referral_contact_name?: string | null;
 }
 
+type ColumnMeta = {
+  headerClassName?: string;
+  cellClassName?: string;
+};
+
+const hideOnSm: ColumnMeta = {
+  headerClassName: 'hidden sm:table-cell',
+  cellClassName: 'hidden sm:table-cell',
+};
+
+const hideOnMd: ColumnMeta = {
+  headerClassName: 'hidden md:table-cell',
+  cellClassName: 'hidden md:table-cell',
+};
+
+const hideOnLg: ColumnMeta = {
+  headerClassName: 'hidden lg:table-cell',
+  cellClassName: 'hidden lg:table-cell',
+};
+
 export const columns: ColumnDef<ApplicationRow>[] = [
   {
     id: 'select',
@@ -62,11 +82,22 @@ export const columns: ColumnDef<ApplicationRow>[] = [
         </Button>
       );
     },
-    cell: ({ row }) => (
-      <div className="font-medium text-gray-900 dark:text-white">
-        {row.getValue('company')}
-      </div>
-    ),
+    cell: ({ row }) => {
+      const company = row.getValue('company') as string;
+      const position = row.getValue('position') as string;
+      const location = row.getValue('location') as string | null;
+      return (
+        <div className="min-w-0">
+          <div className="font-medium text-gray-900 dark:text-white truncate">
+            {company}
+          </div>
+          <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 sm:hidden truncate">
+            {position}
+            {location ? ` • ${location}` : ''}
+          </div>
+        </div>
+      );
+    },
   },
   {
     accessorKey: 'position',
@@ -82,8 +113,11 @@ export const columns: ColumnDef<ApplicationRow>[] = [
         </Button>
       );
     },
+    meta: hideOnSm,
     cell: ({ row }) => (
-      <div className="text-gray-900 dark:text-white">{row.getValue('position')}</div>
+      <div className="text-gray-900 dark:text-white truncate">
+        {row.getValue('position')}
+      </div>
     ),
   },
   {
@@ -105,6 +139,7 @@ export const columns: ColumnDef<ApplicationRow>[] = [
         </Button>
       );
     },
+    meta: hideOnLg,
     cell: ({ row }) => {
       const matchScore = row.getValue('match_score') as number | null;
       const hasJobInfo = row.original.job_description || row.original.job_url;
@@ -126,6 +161,7 @@ export const columns: ColumnDef<ApplicationRow>[] = [
   {
     accessorKey: 'referral_contact_id',
     header: 'Referral',
+    meta: hideOnLg,
     cell: ({ row }) => {
       const referralContactId = row.getValue('referral_contact_id') as string | null;
       const referralContactName = row.original.referral_contact_name;
@@ -149,6 +185,7 @@ export const columns: ColumnDef<ApplicationRow>[] = [
   {
     accessorKey: 'location',
     header: 'Location',
+    meta: hideOnMd,
     cell: ({ row }) => {
       const location = row.getValue('location') as string | null;
       return (
@@ -172,6 +209,7 @@ export const columns: ColumnDef<ApplicationRow>[] = [
         </Button>
       );
     },
+    meta: hideOnMd,
     cell: ({ row }) => {
       const date = row.getValue('applied_date') as string | null;
       return (
@@ -195,6 +233,7 @@ export const columns: ColumnDef<ApplicationRow>[] = [
         </Button>
       );
     },
+    meta: hideOnLg,
     cell: ({ row }) => {
       const date = row.getValue('created_at') as string;
       return (
