@@ -22,11 +22,7 @@ import { ApplicationStatus } from '@/types/application';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CelebrationModal } from '@/components/achievements/CelebrationModal';
 import type { CelebrationData } from '@/types/achievements';
-
-interface KanbanBoardProps {
-  applications: ApplicationRow[];
-  loading?: boolean;
-}
+import { useDashboardStore } from '@/stores/dashboard-store';
 
 // Column definitions matching the database enum
 const COLUMNS = [
@@ -50,9 +46,11 @@ const COLUMNS = [
  * - Touch-friendly for mobile devices
  * - Loading skeletons while fetching data
  */
-export function KanbanBoard({ applications, loading = false }: KanbanBoardProps) {
+export function KanbanBoard() {
   const router = useRouter();
   const { toast } = useToast();
+  const applications = useDashboardStore((state) => state.applications);
+  const loading = useDashboardStore((state) => state.loading);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [celebrationData, setCelebrationData] = useState<CelebrationData | null>(null);
 

@@ -16,16 +16,14 @@ import {
   updateFilterPreset,
 } from '@/actions/filter-presets';
 import type { FilterPreset } from '@/types/filters';
-import type { GetApplicationsParams } from '@/actions/applications';
 import { useToast } from '@/hooks/use-toast';
 import { hasActiveFilters } from '@/lib/filterQueryParams';
+import { useDashboardStore } from '@/stores/dashboard-store';
 
-interface FilterPresetsProps {
-  currentFilters: GetApplicationsParams;
-  onLoadPreset: (filters: GetApplicationsParams) => void;
-}
+export function FilterPresets() {
+  const currentFilters = useDashboardStore((state) => state.filters);
+  const applyFilters = useDashboardStore((state) => state.applyFilters);
 
-export function FilterPresets({ currentFilters, onLoadPreset }: FilterPresetsProps) {
   const [presets, setPresets] = useState<FilterPreset[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSaveForm, setShowSaveForm] = useState(false);
@@ -152,7 +150,7 @@ export function FilterPresets({ currentFilters, onLoadPreset }: FilterPresetsPro
   };
 
   const handleLoadPreset = (preset: FilterPreset) => {
-    onLoadPreset(preset.filters);
+    applyFilters(preset.filters, { replace: true });
     toast({
       title: 'Success',
       description: `Loaded preset: ${preset.name}`,
@@ -202,11 +200,8 @@ export function FilterPresets({ currentFilters, onLoadPreset }: FilterPresetsPro
               </Button>
               <Button
                 size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setShowSaveForm(false);
-                  setNewPresetName('');
-                }}
+                variant="outline"
+                onClick={() => setShowSaveForm(false)}
               >
                 Cancel
               </Button>
@@ -215,93 +210,86 @@ export function FilterPresets({ currentFilters, onLoadPreset }: FilterPresetsPro
         </PopoverContent>
       </Popover>
 
-      {/* Load Presets Button */}
+      {/* Filter Presets List */}
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="outline" size="sm" className="gap-2">
             <Star className="h-4 w-4" />
             Presets
             {presets.length > 0 && (
-              <span className="ml-1 rounded-full bg-amber-100 dark:bg-amber-900 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">
+              <span className="ml-1 rounded-full bg-purple-100 dark:bg-purple-900 px-2 py-0.5 text-xs font-medium text-purple-800 dark:text-purple-300">
                 {presets.length}
               </span>
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-80" align="start">
-          <div className="space-y-3">
-            <h4 className="font-medium text-sm">Filter Presets</h4>
+        <PopoverContent className="w-72" align="start">
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm text-gray-900 dark:text-white">
+              Saved Presets
+            </h4>
 
             {loading ? (
-              <div className="text-sm text-gray-500">Loading presets...</div>
+              <p className="text-sm text-gray-500">Loading presets...</p>
             ) : presets.length === 0 ? (
-              <div className="text-sm text-gray-500 text-center py-4">
-                No saved presets yet.
-                <br />
-                Apply some filters and save them!
-              </div>
+              <p className="text-sm text-gray-500">No presets saved yet</p>
             ) : (
-              <div className="max-h-80 overflow-y-auto space-y-2">
+              <div className="space-y-2">
                 {presets.map((preset) => (
                   <div
                     key={preset.id}
-                    className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800"
+                    className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 p-2"
                   >
                     {editingId === preset.id ? (
-                      <>
+                      <div className="flex-1 flex items-center gap-1">
                         <Input
                           value={editingName}
                           onChange={(e) => setEditingName(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              handleSaveEdit(preset.id);
-                            } else if (e.key === 'Escape') {
-                              handleCancelEdit();
-                            }
-                          }}
-                          className="flex-1"
+                          className="h-7"
+                          maxLength={50}
                           autoFocus
                         />
                         <Button
-                          variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          variant="ghost"
+                          className="h-7 w-7"
                           onClick={() => handleSaveEdit(preset.id)}
                         >
-                          <Check className="h-4 w-4" />
+                          <Check className="h-4 w-4 text-green-600" />
                         </Button>
                         <Button
-                          variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          variant="ghost"
+                          className="h-7 w-7"
                           onClick={handleCancelEdit}
                         >
-                          <X className="h-4 w-4" />
+                          <X className="h-4 w-4 text-gray-500" />
                         </Button>
-                      </>
+                      </div>
                     ) : (
                       <>
                         <button
-                          className="flex-1 text-left text-sm font-medium truncate"
+                          type="button"
                           onClick={() => handleLoadPreset(preset)}
+                          className="flex-1 text-left text-sm font-medium text-gray-900 dark:text-white hover:underline"
                         >
                           {preset.name}
                         </button>
                         <Button
-                          variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          variant="ghost"
+                          className="h-7 w-7"
                           onClick={() => handleStartEdit(preset)}
                         >
-                          <Edit2 className="h-4 w-4" />
+                          <Edit2 className="h-4 w-4 text-gray-500" />
                         </Button>
                         <Button
-                          variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-red-600 hover:text-red-700"
+                          variant="ghost"
+                          className="h-7 w-7"
                           onClick={() => handleDeletePreset(preset.id)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
                       </>
                     )}

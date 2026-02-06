@@ -249,7 +249,10 @@ export function ApplicationFormDialog({
 
       {/* Main application form dialog */}
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent
+          className="max-w-2xl max-h-[90vh] overflow-y-auto"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+        >
         <DialogHeader>
           <DialogTitle>Create Application</DialogTitle>
           <DialogDescription>
@@ -258,7 +261,11 @@ export function ApplicationFormDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-6"
+            autoComplete="off"
+          >
             {/* ESSENTIAL INFORMATION */}
             <FormSection label="Essential Information">
               {/* Company Name */}
@@ -273,7 +280,7 @@ export function ApplicationFormDialog({
                     <FormControl>
                       <Input
                         placeholder="e.g., Google, Microsoft"
-                        autoFocus
+                        autoComplete="new-password"
                         {...field}
                       />
                     </FormControl>
@@ -294,6 +301,7 @@ export function ApplicationFormDialog({
                     <FormControl>
                       <Input
                         placeholder="e.g., Senior Software Engineer"
+                        autoComplete="new-password"
                         {...field}
                       />
                     </FormControl>

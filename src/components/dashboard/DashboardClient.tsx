@@ -1,27 +1,40 @@
-'use client';
+"use client";
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import dynamic from 'next/dynamic';
-import { Button } from '@/components/ui/button';
-import { ApplicationsTable } from '@/components/applications/ApplicationsTable';
-import { Plus, LayoutGrid, Table as TableIcon } from 'lucide-react';
-import type { ApplicationRow } from '@/components/applications/columns';
-import { getApplications, type GetApplicationsParams } from '@/actions/applications';
-import { Skeleton } from '@/components/ui/skeleton';
-import { filtersToSearchParams, searchParamsToFilters } from '@/lib/filterQueryParams';
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
+import { Button } from "@/components/ui/button";
+import { ApplicationsTable } from "@/components/applications/ApplicationsTable";
+import { Plus, LayoutGrid, Table as TableIcon } from "lucide-react";
+import type { ApplicationRow } from "@/components/applications/columns";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  filtersToSearchParams,
+  searchParamsToFilters,
+} from "@/lib/filterQueryParams";
+import {
+  DashboardStoreProvider,
+  useDashboardStore,
+  type DashboardPagination,
+} from "@/stores/dashboard-store";
 
 // Lazy load heavy components to reduce initial bundle size
 const ApplicationFormDialog = dynamic(
-  () => import('@/components/applications/ApplicationFormDialog').then((mod) => ({ default: mod.ApplicationFormDialog })),
+  () =>
+    import("@/components/applications/ApplicationFormDialog").then((mod) => ({
+      default: mod.ApplicationFormDialog,
+    })),
   {
     loading: () => null, // Dialog doesn't need loading state
     ssr: false, // Client-side only component
-  }
+  },
 );
 
 const KanbanBoard = dynamic(
-  () => import('@/components/applications/KanbanBoard').then((mod) => ({ default: mod.KanbanBoard })),
+  () =>
+    import("@/components/applications/KanbanBoard").then((mod) => ({
+      default: mod.KanbanBoard,
+    })),
   {
     loading: () => (
       <div className="space-y-4">
@@ -29,25 +42,23 @@ const KanbanBoard = dynamic(
       </div>
     ),
     ssr: false, // Drag-and-drop is client-side only
-  }
+  },
 );
 
 const YourJourneySection = dynamic(
-  () => import('@/components/journey/YourJourneySection').then((mod) => ({ default: mod.YourJourneySection })),
+  () =>
+    import("@/components/journey/YourJourneySection").then((mod) => ({
+      default: mod.YourJourneySection,
+    })),
   {
     loading: () => <Skeleton className="h-48 w-full" />,
-  }
+  },
 );
 
 interface DashboardClientProps {
   userName: string;
   initialApplications: ApplicationRow[];
-  initialPagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  initialPagination: DashboardPagination;
   error: string | null;
 }
 
@@ -57,133 +68,131 @@ export function DashboardClient({
   initialPagination,
   error,
 }: DashboardClientProps) {
+  return (
+    <DashboardStoreProvider
+      initialState={{
+        applications: initialApplications,
+        pagination: initialPagination,
+        filters: {},
+        error,
+      }}
+    >
+      <DashboardClientContent userName={userName} />
+    </DashboardStoreProvider>
+  );
+}
+
+function DashboardClientContent({ userName }: { userName: string }) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [applications, setApplications] = useState(initialApplications);
-  const [pagination, setPagination] = useState(initialPagination);
-  const [filters, setFilters] = useState<GetApplicationsParams>({});
-  const [loading, setLoading] = useState(false);
-  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
-  const [isInitialized, setIsInitialized] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const searchParamString = searchParams.toString();
+
+  const applications = useDashboardStore((state) => state.applications);
+  const pagination = useDashboardStore((state) => state.pagination);
+  const filters = useDashboardStore((state) => state.filters);
+  const loading = useDashboardStore((state) => state.loading);
+  const viewMode = useDashboardStore((state) => state.viewMode);
+  const error = useDashboardStore((state) => state.error);
+  const setViewMode = useDashboardStore((state) => state.setViewMode);
+  const applyFilters = useDashboardStore((state) => state.applyFilters);
+
+  const filtersRef = useRef(filters);
+  const hasInitializedRef = useRef(false);
+
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
 
   // Load view preference from localStorage on mount
   useEffect(() => {
-    const savedView = localStorage.getItem('applicationViewMode');
-    if (savedView === 'kanban' || savedView === 'table') {
+    const savedView = localStorage.getItem("applicationViewMode");
+    if (savedView === "kanban" || savedView === "table") {
       setViewMode(savedView);
     }
-  }, []);
+  }, [setViewMode]);
 
   // Track mobile breakpoint to force table view
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const mediaQuery = window.matchMedia('(max-width: 640px)');
+    if (typeof window === "undefined") return;
+    const mediaQuery = window.matchMedia("(max-width: 640px)");
     const handleChange = (event: MediaQueryListEvent | MediaQueryList) => {
       setIsMobile(event.matches);
     };
 
     handleChange(mediaQuery);
-    if ('addEventListener' in mediaQuery) {
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
+    if ("addEventListener" in mediaQuery) {
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
     }
 
     mediaQuery.addListener(handleChange);
     return () => mediaQuery.removeListener(handleChange);
   }, []);
 
-  // Initialize filters from URL on mount
+  // Sync URL -> store (initial load + back/forward navigation)
   useEffect(() => {
-    if (!isInitialized) {
-      const urlFilters = searchParamsToFilters(searchParams);
-      // Only apply URL filters if there are any
-      const hasUrlFilters = Object.keys(urlFilters).length > 0;
+    const urlFilters = searchParamsToFilters(
+      new URLSearchParams(searchParamString),
+    );
+    const hasUrlFilters = searchParamString.length > 0;
 
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
       if (hasUrlFilters) {
-        setFilters(urlFilters);
-        // Fetch applications with URL filters
-        setLoading(true);
-        getApplications(urlFilters)
-          .then((result) => {
-            if ('data' in result && 'pagination' in result) {
-              setApplications(result.data);
-              setPagination(result.pagination);
-            }
-          })
-          .catch((err) => {
-            console.error('Error fetching applications from URL filters:', err);
-          })
-          .finally(() => {
-            setLoading(false);
-          });
+        applyFilters(urlFilters, { replace: true });
       }
-
-      setIsInitialized(true);
+      return;
     }
-  }, [isInitialized, searchParams]);
+
+    const storeParams = filtersToSearchParams(filtersRef.current).toString();
+    if (searchParamString !== storeParams) {
+      applyFilters(urlFilters, { replace: true });
+    }
+  }, [searchParamString, applyFilters]);
+
+  // Sync store -> URL when filters change
+  useEffect(() => {
+    if (!hasInitializedRef.current) return;
+    const params = filtersToSearchParams(filters);
+    const paramString = params.toString();
+
+    if (paramString === searchParamString) return;
+
+    const newUrl = paramString ? `?${paramString}` : "/dashboard";
+    router.push(newUrl, { scroll: false });
+  }, [filters, searchParamString, router]);
 
   // Save view preference to localStorage
-  const handleViewChange = (mode: 'table' | 'kanban') => {
-    if (isMobile) return;
-    setViewMode(mode);
-    localStorage.setItem('applicationViewMode', mode);
-  };
-
-  const handleSuccess = () => {
-    // Refresh the page to show the new application
-    router.refresh();
-    // Reset filters and refetch all applications
-    setFilters({});
-    handleFilterChange({});
-  };
-
-  const handleFilterChange = useCallback(
-    async (newFilters: Partial<GetApplicationsParams>) => {
-      const updatedFilters = { ...filters, ...newFilters };
-      setFilters(updatedFilters);
-
-      // Update URL with new filters (without page reload)
-      const params = filtersToSearchParams(updatedFilters);
-      const newUrl = params.toString() ? `?${params.toString()}` : '/dashboard';
-      router.push(newUrl, { scroll: false });
-
-      // Show loading skeleton immediately
-      setLoading(true);
-
-      // Fetch from server
-      getApplications(updatedFilters)
-        .then((result) => {
-          if ('data' in result && 'pagination' in result) {
-            setApplications(result.data);
-            setPagination(result.pagination);
-          }
-        })
-        .catch((err) => {
-          console.error('Error fetching applications:', err);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+  const handleViewChange = useCallback(
+    (mode: "table" | "kanban") => {
+      if (isMobile) return;
+      setViewMode(mode);
+      localStorage.setItem("applicationViewMode", mode);
     },
-    [filters, router]
+    [isMobile, setViewMode],
   );
+
+  const handleSuccess = useCallback(() => {
+    router.refresh();
+    applyFilters({}, { replace: true });
+  }, [applyFilters, router]);
 
   // Memoize expensive stats calculations to prevent recalculation on every render
   const stats = useMemo(() => {
-    const totalApplications = initialPagination.total;
+    const totalApplications = pagination.total;
     const activeApplications = applications.filter(
       (app) =>
-        app.status === 'applied' ||
-        app.status === 'screening' ||
-        app.status === 'interviewing'
+        app.status === "applied" ||
+        app.status === "screening" ||
+        app.status === "interviewing",
     ).length;
     const interviewingApplications = applications.filter(
-      (app) => app.status === 'interviewing'
+      (app) => app.status === "interviewing",
     ).length;
     const offerApplications = applications.filter(
-      (app) => app.status === 'offer'
+      (app) => app.status === "offer",
     ).length;
 
     return {
@@ -192,9 +201,9 @@ export function DashboardClient({
       interviewing: interviewingApplications,
       offers: offerApplications,
     };
-  }, [applications, initialPagination.total]);
+  }, [applications, pagination.total]);
 
-  const activeViewMode = isMobile ? 'table' : viewMode;
+  const activeViewMode = isMobile ? "table" : viewMode;
 
   return (
     <div className="min-h-full bg-gray-50 dark:bg-gray-900">
@@ -270,18 +279,18 @@ export function DashboardClient({
             {/* View Toggle */}
             <div className="hidden w-full items-center gap-2 bg-gray-100 dark:bg-gray-900 rounded-lg p-1 sm:flex sm:w-auto">
               <Button
-                variant={activeViewMode === 'table' ? 'default' : 'ghost'}
+                variant={activeViewMode === "table" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => handleViewChange('table')}
+                onClick={() => handleViewChange("table")}
                 className="h-8"
               >
                 <TableIcon className="h-4 w-4 mr-1" />
                 Table
               </Button>
               <Button
-                variant={activeViewMode === 'kanban' ? 'default' : 'ghost'}
+                variant={activeViewMode === "kanban" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => handleViewChange('kanban')}
+                onClick={() => handleViewChange("kanban")}
                 className="h-8"
               >
                 <LayoutGrid className="h-4 w-4 mr-1" />
@@ -306,15 +315,10 @@ export function DashboardClient({
                 Create Your First Application
               </Button>
             </div>
-          ) : activeViewMode === 'table' ? (
-            <ApplicationsTable
-              data={applications}
-              pagination={pagination}
-              onFilterChange={handleFilterChange}
-              loading={loading}
-            />
+          ) : activeViewMode === "table" ? (
+            <ApplicationsTable />
           ) : (
-            <KanbanBoard applications={applications} loading={loading} />
+            <KanbanBoard />
           )}
         </div>
 

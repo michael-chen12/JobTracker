@@ -12,15 +12,7 @@ import {
 import { useDebounce } from '@/hooks/useDebounce';
 import { AdvancedFilterPanel, type AdvancedFilters } from './AdvancedFilterPanel';
 import { FilterPresets } from './FilterPresets';
-import type { GetApplicationsParams } from '@/actions/applications';
-
-interface TableToolbarProps {
-  onFilterChange: (filters: {
-    search?: string;
-    status?: string[];
-    hasReferral?: boolean;
-  } & AdvancedFilters) => void;
-}
+import { useDashboardStore } from '@/stores/dashboard-store';
 
 const statusOptions = [
   { value: 'bookmarked', label: 'Bookmarked' },
@@ -33,7 +25,10 @@ const statusOptions = [
   { value: 'withdrawn', label: 'Withdrawn' },
 ];
 
-export function TableToolbar({ onFilterChange }: TableToolbarProps) {
+export function TableToolbar() {
+  const filters = useDashboardStore((state) => state.filters);
+  const applyFilters = useDashboardStore((state) => state.applyFilters);
+
   const [search, setSearch] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [hasReferral, setHasReferral] = useState<boolean | undefined>(undefined);
@@ -41,61 +36,9 @@ export function TableToolbar({ onFilterChange }: TableToolbarProps) {
   const debouncedSearch = useDebounce(search, 500);
   const prevDebouncedSearchRef = useRef(debouncedSearch);
 
-  // Trigger filter change only when debounced search actually changes
   useEffect(() => {
-    if (prevDebouncedSearchRef.current !== debouncedSearch) {
-      prevDebouncedSearchRef.current = debouncedSearch;
-      onFilterChange({
-        search: debouncedSearch,
-        status: selectedStatuses,
-        hasReferral,
-        ...advancedFilters,
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch]); // Intentionally omit onFilterChange and selectedStatuses to prevent infinite loop
-
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-  };
-
-  const handleStatusToggle = (status: string) => {
-    const newStatuses = selectedStatuses.includes(status)
-      ? selectedStatuses.filter((s) => s !== status)
-      : [...selectedStatuses, status];
-
-    setSelectedStatuses(newStatuses);
-    onFilterChange({
-      search: debouncedSearch,
-      status: newStatuses,
-      hasReferral,
-      ...advancedFilters,
-    });
-  };
-
-  const handleReferralChange = (value: boolean | undefined) => {
-    setHasReferral(value);
-    onFilterChange({
-      search: debouncedSearch,
-      status: selectedStatuses,
-      hasReferral: value,
-      ...advancedFilters,
-    });
-  };
-
-  const handleAdvancedFiltersChange = (newAdvancedFilters: AdvancedFilters) => {
-    setAdvancedFilters(newAdvancedFilters);
-    onFilterChange({
-      search: debouncedSearch,
-      status: selectedStatuses,
-      hasReferral,
-      ...newAdvancedFilters,
-    });
-  };
-
-  const handleLoadPreset = (filters: GetApplicationsParams) => {
-    // Update all filter states from preset
-    setSearch(filters.search || '');
+    const nextSearch = filters.search || '';
+    setSearch(nextSearch);
     setSelectedStatuses(filters.status || []);
     setHasReferral(filters.hasReferral);
     setAdvancedFilters({
@@ -108,9 +51,59 @@ export function TableToolbar({ onFilterChange }: TableToolbarProps) {
       tags: filters.tags,
       priority: filters.priority,
     });
+    prevDebouncedSearchRef.current = nextSearch;
+  }, [filters]);
 
-    // Trigger filter change
-    onFilterChange(filters);
+  // Trigger filter change only when debounced search actually changes
+  useEffect(() => {
+    if (prevDebouncedSearchRef.current !== debouncedSearch) {
+      prevDebouncedSearchRef.current = debouncedSearch;
+      applyFilters({
+        search: debouncedSearch,
+        status: selectedStatuses,
+        hasReferral,
+        ...advancedFilters,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]); // Intentionally omit applyFilters and other deps to avoid extra fetches
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+  };
+
+  const handleStatusToggle = (status: string) => {
+    const newStatuses = selectedStatuses.includes(status)
+      ? selectedStatuses.filter((s) => s !== status)
+      : [...selectedStatuses, status];
+
+    setSelectedStatuses(newStatuses);
+    applyFilters({
+      search: debouncedSearch,
+      status: newStatuses,
+      hasReferral,
+      ...advancedFilters,
+    });
+  };
+
+  const handleReferralChange = (value: boolean | undefined) => {
+    setHasReferral(value);
+    applyFilters({
+      search: debouncedSearch,
+      status: selectedStatuses,
+      hasReferral: value,
+      ...advancedFilters,
+    });
+  };
+
+  const handleAdvancedFiltersChange = (newAdvancedFilters: AdvancedFilters) => {
+    setAdvancedFilters(newAdvancedFilters);
+    applyFilters({
+      search: debouncedSearch,
+      status: selectedStatuses,
+      hasReferral,
+      ...newAdvancedFilters,
+    });
   };
 
   const handleClearFilters = () => {
@@ -118,14 +111,13 @@ export function TableToolbar({ onFilterChange }: TableToolbarProps) {
     setSelectedStatuses([]);
     setHasReferral(undefined);
     setAdvancedFilters({});
-    onFilterChange({
-      search: '',
-      status: [],
-      hasReferral: undefined,
-    });
+    applyFilters({}, { replace: true });
   };
 
-  const hasBasicFilters = search.length > 0 || selectedStatuses.length > 0 || hasReferral !== undefined;
+  const hasBasicFilters =
+    search.length > 0 ||
+    selectedStatuses.length > 0 ||
+    hasReferral !== undefined;
   const hasAdvancedFilters = Object.values(advancedFilters).some((v) =>
     Array.isArray(v) ? v.length > 0 : v !== undefined
   );
@@ -145,92 +137,92 @@ export function TableToolbar({ onFilterChange }: TableToolbarProps) {
             />
           </div>
 
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <Filter className="h-4 w-4" />
-              Status
-              {selectedStatuses.length > 0 && (
-                <span className="ml-1 rounded-full bg-blue-100 dark:bg-blue-900 px-2 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-300">
-                  {selectedStatuses.length}
-                </span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-56" align="start">
-            <div className="space-y-2">
-              <h4 className="font-medium text-sm text-gray-900 dark:text-white mb-3">
-                Filter by Status
-              </h4>
-              {statusOptions.map((option) => (
-                <label
-                  key={option.value}
-                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedStatuses.includes(option.value)}
-                    onChange={() => handleStatusToggle(option.value)}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {option.label}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Filter className="h-4 w-4" />
+                Status
+                {selectedStatuses.length > 0 && (
+                  <span className="ml-1 rounded-full bg-blue-100 dark:bg-blue-900 px-2 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-300">
+                    {selectedStatuses.length}
                   </span>
-                </label>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56" align="start">
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm text-gray-900 dark:text-white mb-3">
+                  Filter by Status
+                </h4>
+                {statusOptions.map((option) => (
+                  <label
+                    key={option.value}
+                    className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedStatuses.includes(option.value)}
+                      onChange={() => handleStatusToggle(option.value)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      {option.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
 
-        {/* Referral Filter */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <Users className="h-4 w-4" />
-              Referral
-              {hasReferral !== undefined && (
-                <span className="ml-1 rounded-full bg-teal-100 dark:bg-teal-900 px-2 py-0.5 text-xs font-medium text-teal-800 dark:text-teal-300">
-                  {hasReferral ? 'Yes' : 'No'}
-                </span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-48" align="start">
-            <div className="space-y-2">
-              <h4 className="font-medium text-sm mb-3">Filter by Referral</h4>
-              <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded">
-                <input
-                  type="radio"
-                  name="referral"
-                  checked={hasReferral === true}
-                  onChange={() => handleReferralChange(true)}
-                  className="h-4 w-4"
-                />
-                <span className="text-sm">Has Referral</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded">
-                <input
-                  type="radio"
-                  name="referral"
-                  checked={hasReferral === false}
-                  onChange={() => handleReferralChange(false)}
-                  className="h-4 w-4"
-                />
-                <span className="text-sm">No Referral</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded">
-                <input
-                  type="radio"
-                  name="referral"
-                  checked={hasReferral === undefined}
-                  onChange={() => handleReferralChange(undefined)}
-                  className="h-4 w-4"
-                />
-                <span className="text-sm">All</span>
-              </label>
-            </div>
-          </PopoverContent>
-        </Popover>
+          {/* Referral Filter */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Users className="h-4 w-4" />
+                Referral
+                {hasReferral !== undefined && (
+                  <span className="ml-1 rounded-full bg-teal-100 dark:bg-teal-900 px-2 py-0.5 text-xs font-medium text-teal-800 dark:text-teal-300">
+                    {hasReferral ? 'Yes' : 'No'}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48" align="start">
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm mb-3">Filter by Referral</h4>
+                <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded">
+                  <input
+                    type="radio"
+                    name="referral"
+                    checked={hasReferral === true}
+                    onChange={() => handleReferralChange(true)}
+                    className="h-4 w-4"
+                  />
+                  <span className="text-sm">Yes</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded">
+                  <input
+                    type="radio"
+                    name="referral"
+                    checked={hasReferral === false}
+                    onChange={() => handleReferralChange(false)}
+                    className="h-4 w-4"
+                  />
+                  <span className="text-sm">No</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded">
+                  <input
+                    type="radio"
+                    name="referral"
+                    checked={hasReferral === undefined}
+                    onChange={() => handleReferralChange(undefined)}
+                    className="h-4 w-4"
+                  />
+                  <span className="text-sm">All</span>
+                </label>
+              </div>
+            </PopoverContent>
+          </Popover>
 
           {hasFilters && (
             <Button
@@ -244,15 +236,7 @@ export function TableToolbar({ onFilterChange }: TableToolbarProps) {
         </div>
 
         {/* Filter Presets */}
-        <FilterPresets
-          currentFilters={{
-            search: debouncedSearch,
-            status: selectedStatuses,
-            hasReferral,
-            ...advancedFilters,
-          }}
-          onLoadPreset={handleLoadPreset}
-        />
+        <FilterPresets />
       </div>
 
       {/* Advanced Filters Panel */}

@@ -18,37 +18,21 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { columns, type ApplicationRow } from './columns';
+import { columns } from './columns';
 import { TableToolbar } from './TableToolbar';
 import { TablePagination } from './TablePagination';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BulkActionsToolbar } from './BulkActionsToolbar';
+import { useDashboardStore } from '@/stores/dashboard-store';
 
-interface ApplicationsTableProps {
-  data: ApplicationRow[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-  onFilterChange: (filters: {
-    search?: string;
-    status?: string[];
-    page?: number;
-  }) => void;
-  loading?: boolean;
-}
-
-export function ApplicationsTable({
-  data,
-  pagination,
-  onFilterChange,
-  loading = false,
-}: ApplicationsTableProps) {
+export function ApplicationsTable() {
   const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const data = useDashboardStore((state) => state.applications);
+  const pagination = useDashboardStore((state) => state.pagination);
+  const loading = useDashboardStore((state) => state.loading);
+  const applyFilters = useDashboardStore((state) => state.applyFilters);
 
   // Memoize table config to prevent recreation on every render
   const tableConfig = useMemo(
@@ -101,7 +85,7 @@ export function ApplicationsTable({
           onOperationComplete={handleOperationComplete}
         />
       ) : (
-        <TableToolbar onFilterChange={onFilterChange} />
+        <TableToolbar />
       )}
 
       <div className="rounded-md border border-gray-200 dark:border-gray-700">
@@ -196,7 +180,7 @@ export function ApplicationsTable({
         totalPages={pagination.totalPages}
         totalItems={pagination.total}
         itemsPerPage={pagination.limit}
-        onPageChange={(page) => onFilterChange({ page })}
+        onPageChange={(page) => applyFilters({ page })}
       />
     </div>
   );
