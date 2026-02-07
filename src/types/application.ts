@@ -19,6 +19,25 @@ export type Milestone = Database['public']['Tables']['milestones']['Row'];
 export type AIUsage = Database['public']['Tables']['ai_usage']['Row'];
 export type Insight = Database['public']['Tables']['insights']['Row'];
 
+// Correspondence types (Ticket #25: Email Correspondence)
+export type CorrespondenceDirection = 'inbound' | 'outbound';
+
+// Manual type definition (until database types are regenerated)
+export type ApplicationCorrespondence = {
+  id: string;
+  application_id: string;
+  subject: string;
+  sender: string;
+  recipient: string | null;
+  direction: CorrespondenceDirection;
+  correspondence_date: string;
+  notes: string | null;
+  gmail_message_id: string | null;
+  gmail_thread_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 // Manual Tag type definition (until database types are regenerated)
 export type Tag = {
   id: string;
@@ -56,7 +75,7 @@ export type JobType = 'full-time' | 'part-time' | 'contract' | 'internship' | 'r
 
 export type NoteType = 'general' | 'interview' | 'follow-up' | 'research' | 'contact';
 
-export type DocumentType = 'resume' | 'cover_letter' | 'portfolio' | 'transcript' | 'other';
+export type DocumentType = 'resume' | 'cover_letter' | 'portfolio' | 'transcript' | 'correspondence' | 'other';
 
 export type ContactType = 'recruiter' | 'hiring_manager' | 'referral' | 'colleague' | 'other';
 
@@ -101,7 +120,8 @@ export interface ApplicationWithRelations extends Application {
   notes: ApplicationNote[];
   documents: ApplicationDocument[];
   milestones: Milestone[];
-  achievements?: Achievement[]; // Optional achievements array
+  achievements?: Achievement[];
+  correspondence?: ApplicationCorrespondence[];
 }
 
 export interface ApplicationWithTags extends Application {

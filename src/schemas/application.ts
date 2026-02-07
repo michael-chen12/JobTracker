@@ -104,6 +104,84 @@ export const createTagSchema = z.object({
 
 export const updateTagSchema = createTagSchema.partial();
 
+// Document type validation
+export const documentTypeSchema = z.enum([
+  'resume',
+  'cover_letter',
+  'portfolio',
+  'transcript',
+  'correspondence',
+  'other',
+]);
+
+// Document upload validation schema
+export const uploadDocumentSchema = z.object({
+  application_id: z.string().uuid('Invalid application ID'),
+  document_type: documentTypeSchema.default('other'),
+});
+
+// File validation constants
+export const DOCUMENT_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
+export const DOCUMENT_MAX_TOTAL_SIZE = 50 * 1024 * 1024; // 50MB total per application
+export const DOCUMENT_ACCEPTED_MIME_TYPES = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+  'image/jpeg',
+  'image/png',
+] as const;
+
+export const DOCUMENT_ACCEPTED_EXTENSIONS = '.pdf,.docx,.txt,.jpg,.jpeg,.png';
+
+export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  resume: 'Resume',
+  cover_letter: 'Cover Letter',
+  portfolio: 'Portfolio',
+  transcript: 'Transcript',
+  correspondence: 'Correspondence',
+  other: 'Other',
+};
+
+export type UploadDocumentInput = z.infer<typeof uploadDocumentSchema>;
+
+// Correspondence validation (Ticket #25)
+export const correspondenceDirectionSchema = z.enum(['inbound', 'outbound']);
+
+export const createCorrespondenceSchema = z.object({
+  application_id: z.string().uuid('Invalid application ID'),
+  subject: z
+    .string()
+    .min(1, 'Subject is required')
+    .max(500, 'Subject must be 500 characters or less'),
+  sender: z
+    .string()
+    .min(1, 'Sender is required')
+    .max(255, 'Sender must be 255 characters or less'),
+  recipient: z
+    .string()
+    .max(255, 'Recipient must be 255 characters or less')
+    .optional()
+    .transform((val) => (val === '' ? undefined : val)),
+  direction: correspondenceDirectionSchema,
+  correspondence_date: z
+    .string()
+    .datetime('Invalid date format')
+    .optional()
+    .default(() => new Date().toISOString()),
+  notes: z
+    .string()
+    .max(2000, 'Notes must be 2000 characters or less')
+    .optional()
+    .transform((val) => (val ? val.trim() : undefined)),
+});
+
+export const CORRESPONDENCE_DIRECTION_LABELS: Record<string, string> = {
+  inbound: 'Received',
+  outbound: 'Sent',
+};
+
+export type CreateCorrespondenceInput = z.infer<typeof createCorrespondenceSchema>;
+
 // Type inference from schemas
 export type CreateApplicationInput = z.infer<typeof createApplicationSchema>;
 export type UpdateApplicationInput = z.infer<typeof updateApplicationSchema>;

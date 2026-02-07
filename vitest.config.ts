@@ -6,8 +6,17 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     setupFiles: ['./src/lib/ai/__tests__/setup.ts'],
-    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
-    exclude: ['node_modules/**', 'tests/**', '.next/**'],
+    include: [
+      'src/**/*.test.ts',
+      'src/**/*.test.tsx',
+      'tests/unit/**/*.test.ts',
+    ],
+    exclude: [
+      'node_modules/**',
+      'tests/e2e/**',
+      'tests/**/*.spec.ts',
+      '.next/**',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

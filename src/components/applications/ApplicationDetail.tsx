@@ -3,7 +3,7 @@
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ApplicationWithRelations } from '@/types/application';
+import { ApplicationWithRelations, ApplicationCorrespondence } from '@/types/application';
 import { Button } from '@/components/ui/button';
 import {
   ChevronLeft,
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
 import { NotesSection } from './NotesSection';
+import { CorrespondenceSection } from './CorrespondenceSection';
 import { DocumentsSection } from './DocumentsSection';
 import { DeleteApplicationButton } from './DeleteApplicationButton';
 import { EditableField } from './EditableField';
@@ -35,6 +36,10 @@ interface ApplicationDetailProps {
    * Passing as prop avoids useEffect in client component
    */
   referralContact?: Contact | null;
+  /** Email correspondence (fetched by parent server component) */
+  correspondence?: ApplicationCorrespondence[];
+  /** Logged-in user's email for auto-filling outbound sender */
+  userEmail?: string;
 }
 
 /**
@@ -55,7 +60,7 @@ interface ApplicationDetailProps {
  * - Contact linking
  * - Delete with confirmation
  */
-export function ApplicationDetail({ application, referralContact }: ApplicationDetailProps) {
+export function ApplicationDetail({ application, referralContact, correspondence = [], userEmail }: ApplicationDetailProps) {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -327,6 +332,13 @@ export function ApplicationDetail({ application, referralContact }: ApplicationD
           applicationId={application.id}
           referralContact={referralContact || null}
           onContactLinked={handleContactLinked}
+        />
+
+        {/* Correspondence Section */}
+        <CorrespondenceSection
+          applicationId={application.id}
+          correspondence={correspondence}
+          userEmail={userEmail}
         />
 
         {/* Notes Section */}

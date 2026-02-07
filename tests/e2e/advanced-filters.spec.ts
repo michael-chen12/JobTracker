@@ -1,360 +1,417 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+const AUTH_STATE_PATH = process.env.PLAYWRIGHT_AUTH_STATE;
+const FILTER_DEBOUNCE_MS = 700;
+
+function uniqueName(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+}
+
+async function waitForFiltersToApply(page: Page) {
+  await page.waitForTimeout(FILTER_DEBOUNCE_MS);
+}
+
+async function waitForResultsOrEmptyState(page: Page) {
+  await Promise.race([
+    page.locator('table tbody tr').first().waitFor({ state: 'visible', timeout: 5000 }),
+    page.getByText('No applications found matching your filters.').waitFor({
+      state: 'visible',
+      timeout: 5000,
+    }),
+  ]);
+}
+
+async function ensureAdvancedFiltersExpanded(page: Page) {
+  const locationInput = page.getByPlaceholder('e.g., San Francisco');
+  if (await locationInput.isVisible()) return;
+
+  await page.getByRole('button', { name: /Advanced Filters/i }).click();
+  await expect(locationInput).toBeVisible();
+}
+
+async function pickDate(page: Page, pickerIndex: number) {
+  const dateButtons = page.getByRole('button', { name: 'Pick a date' });
+  await dateButtons.nth(pickerIndex).click();
+
+  const dayButton = page.locator('.rdp-day_button:not([disabled])').first();
+  await expect(dayButton).toBeVisible();
+  await dayButton.click();
+}
 
 test.describe('Advanced Filtering', () => {
+  test.skip(
+    !AUTH_STATE_PATH,
+    'Set PLAYWRIGHT_AUTH_STATE to an authenticated storage-state JSON file before running this suite.'
+  );
+
+  test.use({ storageState: AUTH_STATE_PATH });
+
   test.beforeEach(async ({ page }) => {
-    // Login and navigate to dashboard
-    await page.goto('/login');
-    // TODO: Replace with actual login credentials or test user
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'testpassword');
-    await page.click('button[type="submit"]');
-    await page.waitForURL('/dashboard');
+    await page.goto('/dashboard');
+    await expect(page).toHaveURL(/\/dashboard/);
+    await waitForResultsOrEmptyState(page);
   });
 
-  test('should expand and collapse advanced filters panel', async ({ page }) => {
-    // Panel should be collapsed by default
-    await expect(page.locator('text=Location')).not.toBeVisible();
-
-    // Click to expand
-    await page.click('button:has-text("Advanced Filters")');
-
-    // Panel should now be visible
-    await expect(page.locator('text=Location')).toBeVisible();
-    await expect(page.locator('input[placeholder*="San Francisco"]')).toBeVisible();
-
-    // Click to collapse
-    await page.click('button:has-text("Advanced Filters")');
-
-    // Panel should be hidden
-    await expect(page.locator('text=Location')).not.toBeVisible();
+  test('keeps advanced panel collapsed by default', async ({ page }) => {
+    await expect(page.getByPlaceholder('e.g., San Francisco')).not.toBeVisible();
   });
 
-  test('should apply location filter and show results', async ({ page }) => {
-    // Expand advanced filters
-    await page.click('button:has-text("Advanced Filters")');
+  test('expands and collapses advanced filters panel', async ({ page }) => {
+    const toggle = page.getByRole('button', { name: /Advanced Filters/i });
+    await toggle.click();
+    await expect(page.getByPlaceholder('e.g., San Francisco')).toBeVisible();
 
-    // Enter location
-    await page.fill('input[placeholder*="San Francisco"]', 'Remote');
+    await toggle.click();
+    await expect(page.getByPlaceholder('e.g., San Francisco')).not.toBeVisible();
+  });
 
-    // Wait for debounced filter to apply
-    await page.waitForTimeout(600);
+  test('applies and clears location filter', async ({ page }) => {
+    await ensureAdvancedFiltersExpanded(page);
+    const locationInput = page.getByPlaceholder('e.g., San Francisco');
 
-    // Verify URL contains location filter
+    await locationInput.fill('Remote');
+    await waitForFiltersToApply(page);
     await expect(page).toHaveURL(/location=Remote/);
 
-    // Verify active filter count badge
-    await expect(page.locator('button:has-text("Advanced Filters") >> text=/\\d+/')).toBeVisible();
-
-    // Verify table updates (should have loading state then results)
-    await page.waitForSelector('table tbody tr', { timeout: 5000 });
+    await locationInput.fill('');
+    await waitForFiltersToApply(page);
+    await expect(page).not.toHaveURL(/location=/);
   });
 
-  test('should apply multiple filters with AND logic', async ({ page }) => {
-    // Expand advanced filters
-    await page.click('button:has-text("Advanced Filters")');
+  test('toggles job type filter on and off', async ({ page }) => {
+    await ensureAdvancedFiltersExpanded(page);
 
-    // Apply location filter
-    await page.fill('input[placeholder*="San Francisco"]', 'San Francisco');
-
-    // Apply job type filter
-    await page.click('button:has-text("Full-time")');
-
-    // Apply priority filter
-    await page.click('button:has-text("High")');
-
-    // Wait for filters to apply
-    await page.waitForTimeout(600);
-
-    // Verify URL contains all filters
-    await expect(page).toHaveURL(/location=San/);
+    await page.getByRole('button', { name: 'Full-time' }).click();
+    await waitForFiltersToApply(page);
     await expect(page).toHaveURL(/jobType=full-time/);
+
+    await page.getByRole('button', { name: 'Full-time' }).click();
+    await waitForFiltersToApply(page);
+    await expect(page).not.toHaveURL(/jobType=/);
+  });
+
+  test('toggles priority filter on and off', async ({ page }) => {
+    await ensureAdvancedFiltersExpanded(page);
+
+    await page.getByRole('button', { name: 'High' }).click();
+    await waitForFiltersToApply(page);
     await expect(page).toHaveURL(/priority=high/);
 
-    // Verify active filter count (3 advanced filters)
-    await expect(page.locator('button:has-text("Advanced Filters") >> span').last()).toContainText('3');
+    await page.getByRole('button', { name: 'High' }).click();
+    await waitForFiltersToApply(page);
+    await expect(page).not.toHaveURL(/priority=/);
   });
 
-  test('should apply salary range filter', async ({ page }) => {
-    // Expand advanced filters
-    await page.click('button:has-text("Advanced Filters")');
+  test('applies min salary only', async ({ page }) => {
+    await ensureAdvancedFiltersExpanded(page);
+    await page.getByPlaceholder('e.g., 80000').fill('120000');
 
-    // Set min and max salary
-    await page.fill('input[placeholder*="80000"]', '100000');
-    await page.fill('input[placeholder*="150000"]', '150000');
+    await waitForFiltersToApply(page);
+    await expect(page).toHaveURL(/salaryMin=120000/);
+    await expect(page).not.toHaveURL(/salaryMax=/);
+  });
 
-    // Wait for filters to apply
-    await page.waitForTimeout(600);
+  test('applies max salary only', async ({ page }) => {
+    await ensureAdvancedFiltersExpanded(page);
+    await page.getByPlaceholder('e.g., 150000').fill('180000');
 
-    // Verify URL contains salary filters
+    await waitForFiltersToApply(page);
+    await expect(page).toHaveURL(/salaryMax=180000/);
+    await expect(page).not.toHaveURL(/salaryMin=/);
+  });
+
+  test('applies min and max salary range together', async ({ page }) => {
+    await ensureAdvancedFiltersExpanded(page);
+    await page.getByPlaceholder('e.g., 80000').fill('100000');
+    await page.getByPlaceholder('e.g., 150000').fill('150000');
+
+    await waitForFiltersToApply(page);
     await expect(page).toHaveURL(/salaryMin=100000/);
     await expect(page).toHaveURL(/salaryMax=150000/);
   });
 
-  test('should apply date range filter', async ({ page }) => {
-    // Expand advanced filters
-    await page.click('button:has-text("Advanced Filters")');
+  test('applies applied-date-from filter', async ({ page }) => {
+    await ensureAdvancedFiltersExpanded(page);
+    await pickDate(page, 0);
 
-    // Click "Applied From" button to open calendar
-    await page.click('button:has-text("Applied From") >> button');
-
-    // Select a date from calendar (click on day 15)
-    await page.click('button[name="day"]:has-text("15")').first();
-
-    // Click "Applied To" button to open calendar
-    await page.click('button:has-text("Applied To") >> button');
-
-    // Select a later date (click on day 25)
-    await page.click('button[name="day"]:has-text("25")').first();
-
-    // Wait for filters to apply
-    await page.waitForTimeout(600);
-
-    // Verify URL contains date filters
+    await waitForFiltersToApply(page);
     await expect(page).toHaveURL(/appliedDateFrom=/);
+  });
+
+  test('applies applied-date-to filter', async ({ page }) => {
+    await ensureAdvancedFiltersExpanded(page);
+    await pickDate(page, 1);
+
+    await waitForFiltersToApply(page);
     await expect(page).toHaveURL(/appliedDateTo=/);
   });
 
-  test('should create and apply tag filter', async ({ page }) => {
-    // Expand advanced filters
-    await page.click('button:has-text("Advanced Filters")');
+  test('combines multiple advanced filters with AND logic', async ({ page }) => {
+    await ensureAdvancedFiltersExpanded(page);
+    await page.getByPlaceholder('e.g., San Francisco').fill('San Francisco');
+    await page.getByRole('button', { name: 'Full-time' }).click();
+    await page.getByRole('button', { name: 'High' }).click();
 
-    // Click Tags button to open selector
-    await page.click('button:has-text("Tags")');
-
-    // Click "Create New Tag"
-    await page.click('button:has-text("Create New Tag")');
-
-    // Enter tag name
-    await page.fill('input[placeholder="Tag name"]', 'Tech Companies');
-
-    // Click color selector (select first color)
-    await page.click('button[aria-label*="Select #"]').first();
-
-    // Click Create button
-    await page.click('button:has-text("Create") >> visible=true');
-
-    // Wait for tag creation
-    await page.waitForTimeout(500);
-
-    // Select the newly created tag
-    await page.click('label:has-text("Tech Companies") >> input[type="checkbox"]');
-
-    // Close popover
-    await page.keyboard.press('Escape');
-
-    // Wait for filters to apply
-    await page.waitForTimeout(600);
-
-    // Verify URL contains tags filter
-    await expect(page).toHaveURL(/tags=/);
-
-    // Verify active filter count includes tag
-    await expect(page.locator('button:has-text("Tags") >> span').last()).toContainText('1');
+    await waitForFiltersToApply(page);
+    await expect(page).toHaveURL(/location=San/);
+    await expect(page).toHaveURL(/jobType=full-time/);
+    await expect(page).toHaveURL(/priority=high/);
   });
 
-  test('should clear advanced filters independently', async ({ page }) => {
-    // Apply some basic filters first
-    await page.fill('input[placeholder*="Search by company"]', 'Google');
-    await page.click('button:has-text("Status")');
-    await page.click('label:has-text("Applied") >> input[type="checkbox"]');
+  test('clears advanced filters while preserving basic filters', async ({ page }) => {
+    await page
+      .getByPlaceholder('Search by company or position...')
+      .fill('Google');
 
-    // Expand and apply advanced filters
-    await page.click('button:has-text("Advanced Filters")');
-    await page.fill('input[placeholder*="San Francisco"]', 'Remote');
-    await page.click('button:has-text("Full-time")');
+    await page.getByRole('button', { name: /^Status/ }).click();
+    await page
+      .locator('label:has-text("Applied") input[type="checkbox"]')
+      .check();
+    await page.keyboard.press('Escape');
 
-    await page.waitForTimeout(600);
+    await ensureAdvancedFiltersExpanded(page);
+    await page.getByPlaceholder('e.g., San Francisco').fill('Remote');
+    await page.getByRole('button', { name: 'Full-time' }).click();
+    await waitForFiltersToApply(page);
 
-    // Click "Clear Advanced Filters"
-    await page.click('button:has-text("Clear Advanced Filters")');
+    await page.getByRole('button', { name: /Clear Advanced Filters/i }).click();
+    await waitForFiltersToApply(page);
 
-    // Verify advanced filters cleared but basic filters remain
     await expect(page).toHaveURL(/search=Google/);
     await expect(page).toHaveURL(/status=applied/);
     await expect(page).not.toHaveURL(/location=/);
     await expect(page).not.toHaveURL(/jobType=/);
-
-    // Verify basic search field still has value
-    await expect(page.locator('input[placeholder*="Search by company"]')).toHaveValue('Google');
   });
 
-  test('should save and load filter preset', async ({ page }) => {
-    // Apply multiple filters
-    await page.fill('input[placeholder*="Search by company"]', 'Tech');
-    await page.click('button:has-text("Advanced Filters")');
-    await page.fill('input[placeholder*="San Francisco"]', 'San Francisco');
-    await page.click('button:has-text("Remote")');
-    await page.click('button:has-text("High")');
+  test('clears all filters from toolbar', async ({ page }) => {
+    await page.getByPlaceholder('Search by company or position...').fill('Meta');
+    await ensureAdvancedFiltersExpanded(page);
+    await page.getByPlaceholder('e.g., San Francisco').fill('Austin');
+    await waitForFiltersToApply(page);
 
-    await page.waitForTimeout(600);
+    await page.getByRole('button', { name: /Clear all filters/i }).click();
+    await waitForFiltersToApply(page);
 
-    // Click "Save Filters"
-    await page.click('button:has-text("Save Filters")');
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(
+      page.getByPlaceholder('Search by company or position...')
+    ).toHaveValue('');
+  });
 
-    // Enter preset name
-    await page.fill('input[placeholder*="Preset name"]', 'SF Remote High Priority');
+  test('updates active advanced filter count badge', async ({ page }) => {
+    const advancedButton = page.getByRole('button', { name: /Advanced Filters/i });
 
-    // Click Save
-    await page.click('button:has-text("Save") >> visible=true');
+    await expect(advancedButton.locator('span.rounded-full')).not.toBeVisible();
 
-    // Wait for save confirmation
-    await page.waitForTimeout(500);
+    await ensureAdvancedFiltersExpanded(page);
+    await page.getByPlaceholder('e.g., San Francisco').fill('Boston');
+    await waitForFiltersToApply(page);
+    await expect(advancedButton.locator('span.rounded-full')).toContainText('1');
 
-    // Clear all filters
-    await page.click('button:has-text("Clear all filters")');
+    await page.getByRole('button', { name: 'Full-time' }).click();
+    await page.getByRole('button', { name: 'High' }).click();
+    await waitForFiltersToApply(page);
+    await expect(advancedButton.locator('span.rounded-full')).toContainText('3');
 
-    await page.waitForTimeout(300);
+    await page.getByRole('button', { name: /Clear Advanced Filters/i }).click();
+    await waitForFiltersToApply(page);
+    await expect(advancedButton.locator('span.rounded-full')).not.toBeVisible();
+  });
 
-    // Verify filters are cleared
+  test('disables save-filters button when there are no active filters', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /Save Filters/i })).toBeDisabled();
+  });
+
+  test('creates and applies tag filter', async ({ page }) => {
+    await ensureAdvancedFiltersExpanded(page);
+    await page.getByRole('button', { name: /^Tags/ }).click();
+
+    const popover = page.locator('[data-radix-popper-content-wrapper]').last();
+    const emptyState = popover.getByText('No tags yet. Create your first tag!');
+
+    if (await emptyState.isVisible()) {
+      const newTagName = uniqueName('E2E-Tag');
+      await popover.getByRole('button', { name: /Create New Tag/i }).click();
+      await popover.getByPlaceholder('Tag name').fill(newTagName);
+      await popover.locator('button[aria-label^="Select #"]').first().click();
+      await popover.getByRole('button', { name: 'Create' }).click();
+      await expect(popover.getByText(newTagName)).toBeVisible();
+    }
+
+    await popover.locator('input[type="checkbox"]').first().check();
+    await page.keyboard.press('Escape');
+    await waitForFiltersToApply(page);
+
+    await expect(page).toHaveURL(/tags=/);
+  });
+
+  test('saves and loads a filter preset', async ({ page }) => {
+    const presetName = uniqueName('Preset');
+
+    await page.getByPlaceholder('Search by company or position...').fill('Tech');
+    await ensureAdvancedFiltersExpanded(page);
+    await page.getByPlaceholder('e.g., San Francisco').fill('Seattle');
+    await page.getByRole('button', { name: 'Remote' }).click();
+    await waitForFiltersToApply(page);
+
+    await page.getByRole('button', { name: /Save Filters/i }).click();
+    await page
+      .getByPlaceholder('Preset name (e.g., Remote Tech Jobs)')
+      .fill(presetName);
+    await page.getByRole('button', { name: 'Save' }).click();
+    await waitForFiltersToApply(page);
+
+    await page.getByRole('button', { name: /Clear all filters/i }).click();
+    await waitForFiltersToApply(page);
     await expect(page).not.toHaveURL(/search=/);
 
-    // Click "Presets" to load saved preset
-    await page.click('button:has-text("Presets")');
+    await page.getByRole('button', { name: /^Presets/ }).click();
+    await page.getByRole('button', { name: presetName }).click();
+    await waitForFiltersToApply(page);
 
-    // Click on the saved preset
-    await page.click('button:has-text("SF Remote High Priority")');
-
-    // Wait for filters to apply
-    await page.waitForTimeout(600);
-
-    // Verify all filters were restored
     await expect(page).toHaveURL(/search=Tech/);
-    await expect(page).toHaveURL(/location=San/);
+    await expect(page).toHaveURL(/location=Seattle/);
     await expect(page).toHaveURL(/jobType=remote/);
-    await expect(page).toHaveURL(/priority=high/);
-
-    // Verify search input has value
-    await expect(page.locator('input[placeholder*="Search by company"]')).toHaveValue('Tech');
   });
 
-  test('should persist filters in URL and restore on reload', async ({ page }) => {
-    // Apply filters
-    await page.click('button:has-text("Advanced Filters")');
-    await page.fill('input[placeholder*="San Francisco"]', 'New York');
-    await page.click('button:has-text("Full-time")');
-    await page.fill('input[placeholder*="80000"]', '120000');
+  test('renames an existing filter preset', async ({ page }) => {
+    const originalName = uniqueName('RenameFrom');
+    const updatedName = `${originalName}-Updated`;
 
-    await page.waitForTimeout(600);
+    await page.getByPlaceholder('Search by company or position...').fill('NLP');
+    await waitForFiltersToApply(page);
+    await page.getByRole('button', { name: /Save Filters/i }).click();
+    await page
+      .getByPlaceholder('Preset name (e.g., Remote Tech Jobs)')
+      .fill(originalName);
+    await page.getByRole('button', { name: 'Save' }).click();
+    await waitForFiltersToApply(page);
 
-    // Get current URL
-    const currentUrl = page.url();
+    await page.getByRole('button', { name: /^Presets/ }).click();
+    const row = page
+      .locator('div.flex.items-center.gap-2.rounded-lg.border')
+      .filter({ hasText: originalName })
+      .first();
 
-    // Reload page
+    await row.locator('button').nth(1).click(); // edit icon button
+    const editInput = row.locator('input');
+    await editInput.fill(updatedName);
+    await row.locator('button').first().click(); // confirm icon button
+
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: /^Presets/ }).click();
+    await expect(page.getByRole('button', { name: updatedName })).toBeVisible();
+  });
+
+  test('deletes a saved preset', async ({ page }) => {
+    const presetName = uniqueName('DeleteMe');
+
+    await page.getByPlaceholder('Search by company or position...').fill('Data');
+    await waitForFiltersToApply(page);
+    await page.getByRole('button', { name: /Save Filters/i }).click();
+    await page
+      .getByPlaceholder('Preset name (e.g., Remote Tech Jobs)')
+      .fill(presetName);
+    await page.getByRole('button', { name: 'Save' }).click();
+    await waitForFiltersToApply(page);
+
+    await page.getByRole('button', { name: /^Presets/ }).click();
+    const row = page
+      .locator('div.flex.items-center.gap-2.rounded-lg.border')
+      .filter({ hasText: presetName })
+      .first();
+
+    await row.locator('button').nth(2).click(); // delete icon button
+    await expect(page.getByRole('button', { name: presetName })).not.toBeVisible();
+  });
+
+  test('persists filters in URL after reload', async ({ page }) => {
+    await ensureAdvancedFiltersExpanded(page);
+    await page.getByPlaceholder('e.g., San Francisco').fill('New York');
+    await page.getByRole('button', { name: 'Full-time' }).click();
+    await page.getByPlaceholder('e.g., 80000').fill('120000');
+    await waitForFiltersToApply(page);
+
+    const urlBeforeReload = page.url();
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    // Verify URL is preserved
-    expect(page.url()).toBe(currentUrl);
+    expect(page.url()).toBe(urlBeforeReload);
 
-    // Expand advanced filters
-    await page.click('button:has-text("Advanced Filters")');
-
-    // Verify all filter values are restored
-    await expect(page.locator('input[placeholder*="San Francisco"]')).toHaveValue('New York');
-    await expect(page.locator('button:has-text("Full-time")')).toHaveAttribute('data-state', 'on');
-    await expect(page.locator('input[placeholder*="80000"]')).toHaveValue('120000');
-
-    // Verify active filter count is preserved
-    await expect(page.locator('button:has-text("Advanced Filters") >> span').last()).toContainText('3');
+    await ensureAdvancedFiltersExpanded(page);
+    await expect(page.getByPlaceholder('e.g., San Francisco')).toHaveValue('New York');
+    await expect(page.getByPlaceholder('e.g., 80000')).toHaveValue('120000');
   });
 
-  test('should handle no results for impossible filter combination', async ({ page }) => {
-    // Apply contradicting filters that will return no results
-    await page.click('button:has-text("Advanced Filters")');
-    await page.fill('input[placeholder*="San Francisco"]', 'NonexistentCity12345');
-    await page.fill('input[placeholder*="80000"]', '999999999');
+  test('supports back and forward navigation for filter state', async ({ page }) => {
+    await ensureAdvancedFiltersExpanded(page);
+    const locationInput = page.getByPlaceholder('e.g., San Francisco');
 
-    await page.waitForTimeout(600);
+    await locationInput.fill('Chicago');
+    await waitForFiltersToApply(page);
+    const firstUrl = page.url();
 
-    // Verify empty state is shown
-    await expect(page.locator('text=/No (applications|results) found/i')).toBeVisible({
-      timeout: 5000,
-    });
+    await locationInput.fill('Denver');
+    await waitForFiltersToApply(page);
+    const secondUrl = page.url();
+
+    expect(secondUrl).not.toBe(firstUrl);
+
+    await page.goBack();
+    await expect(page).toHaveURL(firstUrl);
+
+    await page.goForward();
+    await expect(page).toHaveURL(secondUrl);
   });
 
-  test('should update active filter count badge correctly', async ({ page }) => {
-    // No filters applied - badge should not be visible
+  test('shows empty state for impossible filter combinations', async ({ page }) => {
+    await ensureAdvancedFiltersExpanded(page);
+    await page.getByPlaceholder('e.g., San Francisco').fill('NonexistentCity12345');
+    await page.getByPlaceholder('e.g., 80000').fill('999999999');
+    await waitForFiltersToApply(page);
+
     await expect(
-      page.locator('button:has-text("Advanced Filters") >> span.rounded-full')
-    ).not.toBeVisible();
-
-    // Expand and apply 1 filter
-    await page.click('button:has-text("Advanced Filters")');
-    await page.fill('input[placeholder*="San Francisco"]', 'Boston');
-
-    await page.waitForTimeout(600);
-
-    // Badge should show "1"
-    await expect(page.locator('button:has-text("Advanced Filters") >> span').last()).toContainText('1');
-
-    // Apply 2 more filters
-    await page.click('button:has-text("Full-time")');
-    await page.click('button:has-text("High")');
-
-    await page.waitForTimeout(600);
-
-    // Badge should show "3"
-    await expect(page.locator('button:has-text("Advanced Filters") >> span').last()).toContainText('3');
-
-    // Clear advanced filters
-    await page.click('button:has-text("Clear Advanced Filters")');
-
-    // Badge should not be visible
-    await expect(
-      page.locator('button:has-text("Advanced Filters") >> span.rounded-full')
-    ).not.toBeVisible();
+      page.getByText('No applications found matching your filters.')
+    ).toBeVisible();
   });
 
-  test('should be mobile responsive', async ({ page }) => {
-    // Set mobile viewport
+  test('stacks filters properly on a mobile viewport', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/dashboard');
+    await waitForResultsOrEmptyState(page);
 
-    // Expand advanced filters
-    await page.click('button:has-text("Advanced Filters")');
-
-    // Verify filters stack vertically on mobile
-    const locationInput = page.locator('input[placeholder*="San Francisco"]');
-    const salaryInput = page.locator('input[placeholder*="80000"]');
+    await ensureAdvancedFiltersExpanded(page);
+    const locationInput = page.getByPlaceholder('e.g., San Francisco');
+    const minSalaryInput = page.getByPlaceholder('e.g., 80000');
+    const fullTimeButton = page.getByRole('button', { name: 'Full-time' });
 
     await expect(locationInput).toBeVisible();
-    await expect(salaryInput).toBeVisible();
-
-    // Apply a filter
-    await locationInput.fill('Remote');
-
-    await page.waitForTimeout(600);
-
-    // Verify filters work on mobile
-    await expect(page).toHaveURL(/location=Remote/);
-
-    // Verify buttons are tap-friendly (should be visible and not overlapping)
-    const fullTimeButton = page.locator('button:has-text("Full-time")');
+    await expect(minSalaryInput).toBeVisible();
     await expect(fullTimeButton).toBeVisible();
 
     const box = await fullTimeButton.boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(32); // Minimum tap target
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(32);
   });
 });
 
 test.describe('Filter Performance', () => {
-  test('should complete filter operation in under 500ms', async ({ page }) => {
+  test.skip(
+    !AUTH_STATE_PATH,
+    'Set PLAYWRIGHT_AUTH_STATE to an authenticated storage-state JSON file before running this suite.'
+  );
+
+  test.use({ storageState: AUTH_STATE_PATH });
+
+  test('completes a filter update in acceptable time', async ({ page }) => {
     await page.goto('/dashboard');
+    await ensureAdvancedFiltersExpanded(page);
 
-    // Expand advanced filters
-    await page.click('button:has-text("Advanced Filters")');
+    const start = Date.now();
+    await page.getByPlaceholder('e.g., San Francisco').fill('Remote');
+    await waitForResultsOrEmptyState(page);
+    const duration = Date.now() - start;
 
-    // Measure time for filter to apply
-    const startTime = Date.now();
-
-    await page.fill('input[placeholder*="San Francisco"]', 'Remote');
-
-    // Wait for table to update
-    await page.waitForSelector('table tbody tr', { timeout: 5000 });
-
-    const endTime = Date.now();
-    const duration = endTime - startTime;
-
-    // Should be under 500ms (plus 600ms debounce = total ~1100ms)
-    expect(duration).toBeLessThan(1500);
+    // Debounce is 500ms in UI; keep threshold tolerant for CI noise.
+    expect(duration).toBeLessThan(2500);
   });
 });

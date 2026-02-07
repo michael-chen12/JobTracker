@@ -128,6 +128,25 @@ export function formatPercentage(value: number | null | undefined, decimals = 0)
 }
 
 /**
+ * Format file size in bytes to human-readable string
+ *
+ * @param bytes - File size in bytes
+ * @returns Formatted string (e.g., "2.5 MB", "340 KB")
+ *
+ * @example
+ * formatFileSize(2621440) // '2.5 MB'
+ * formatFileSize(348160) // '340.0 KB'
+ * formatFileSize(0) // '0 B'
+ */
+export function formatFileSize(bytes: number | null): string {
+  if (bytes === null || bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  const value = bytes / Math.pow(1024, i);
+  return `${value.toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
+}
+
+/**
  * Truncate a string to a maximum length with ellipsis
  *
  * @param text - String to truncate
