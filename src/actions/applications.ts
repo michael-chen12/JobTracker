@@ -78,7 +78,6 @@ export async function createApplication(data: CreateApplicationInput) {
 
     console.log('Application created successfully:', application.id);
     revalidatePath('/dashboard');
-    revalidatePath('/applications');
     revalidateTag(APPLICATIONS_CACHE_TAG, 'max');
     revalidateTag('contacts', 'max');
 
@@ -128,8 +127,7 @@ export async function updateApplication(id: string, data: UpdateApplicationInput
     }
 
     revalidatePath('/dashboard');
-    revalidatePath('/applications');
-    revalidatePath(`/applications/${id}`);
+    revalidatePath(`/dashboard/applications/${id}`);
     revalidateTag(APPLICATIONS_CACHE_TAG, 'max');
     revalidateTag('contacts', 'max');
 
@@ -171,7 +169,6 @@ export async function deleteApplication(id: string) {
     }
 
     revalidatePath('/dashboard');
-    revalidatePath('/applications');
     revalidateTag(APPLICATIONS_CACHE_TAG, 'max');
     revalidateTag('contacts', 'max');
 
@@ -492,7 +489,7 @@ export async function createNote(data: CreateNoteInput) {
       return { error: error.message };
     }
 
-    revalidatePath(`/applications/${data.application_id}`);
+    revalidatePath(`/dashboard/applications/${data.application_id}`);
     revalidateTag(APPLICATIONS_CACHE_TAG, 'max');
 
     return { data: note };
@@ -526,7 +523,7 @@ export async function deleteNote(id: string, applicationId: string) {
       return { error: error.message };
     }
 
-    revalidatePath(`/applications/${applicationId}`);
+    revalidatePath(`/dashboard/applications/${applicationId}`);
     revalidateTag(APPLICATIONS_CACHE_TAG, 'max');
 
     return { success: true };

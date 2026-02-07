@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { AppScrollArea } from "@/components/layout/AppScrollArea";
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
@@ -15,8 +14,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full">
-      <body className="antialiased h-full overflow-hidden">
-        <AppScrollArea>{children}</AppScrollArea>
+      <body className="antialiased h-full">
+        {children}
         <Toaster />
       </body>
     </html>

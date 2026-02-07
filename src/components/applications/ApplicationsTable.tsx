@@ -8,7 +8,14 @@ import {
   RowSelectionState,
   useReactTable,
 } from '@tanstack/react-table';
-import { useState, useEffect, useMemo } from 'react';
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  type KeyboardEvent,
+  type MouseEvent,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Table,
@@ -65,6 +72,43 @@ export function ApplicationsTable() {
   const selectedRows = table.getFilteredSelectedRowModel().rows;
   const selectedIds = selectedRows.map((row) => row.original.id);
   const selectedCount = selectedIds.length;
+
+  const navigateToApplication = useCallback(
+    (applicationId: string) => {
+      router.push(`/dashboard/applications/${applicationId}`);
+    },
+    [router]
+  );
+
+  const isInteractiveElement = (target: EventTarget | null) =>
+    target instanceof HTMLElement &&
+    target.closest(
+      'a, button, input, textarea, select, [role="button"], [role="link"]'
+    ) !== null;
+
+  const handleRowClick = useCallback(
+    (event: MouseEvent<HTMLTableRowElement>, applicationId: string) => {
+      if (isInteractiveElement(event.target)) {
+        return;
+      }
+      navigateToApplication(applicationId);
+    },
+    [navigateToApplication]
+  );
+
+  const handleRowKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLTableRowElement>, applicationId: string) => {
+      if (isInteractiveElement(event.target)) {
+        return;
+      }
+
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        navigateToApplication(applicationId);
+      }
+    },
+    [navigateToApplication]
+  );
 
   const handleClearSelection = () => {
     setRowSelection({});
@@ -143,12 +187,15 @@ export function ApplicationsTable() {
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  onClick={() => router.push(`/dashboard/applications/${row.original.id}`)}
+                  onClick={(event) => handleRowClick(event, row.original.id)}
+                  onKeyDown={(event) => handleRowKeyDown(event, row.original.id)}
+                  tabIndex={0}
+                  aria-label={`Open ${row.original.company} ${row.original.position} details`}
                   className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer ${
                     row.getIsSelected()
                       ? 'bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30'
                       : ''
-                  }`}
+                  } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset`}
                 >
                   {row.getVisibleCells().map((cell) => {
                     const meta = cell.column.columnDef.meta as

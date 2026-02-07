@@ -223,7 +223,7 @@ export const columns: ColumnDef<ApplicationRow>[] = [
     },
   },
   {
-    accessorKey: 'created_at',
+    accessorKey: 'updated_at',
     header: ({ column }) => {
       return (
         <Button
@@ -238,7 +238,7 @@ export const columns: ColumnDef<ApplicationRow>[] = [
     },
     meta: hideOnLg,
     cell: ({ row }) => {
-      const date = row.getValue('created_at') as string;
+      const date = row.getValue('updated_at') as string;
       return (
         <div className="text-sm text-gray-600 dark:text-gray-400">
           {new Date(date).toLocaleDateString()}

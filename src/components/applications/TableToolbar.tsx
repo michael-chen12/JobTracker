@@ -128,8 +128,12 @@ export function TableToolbar() {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-2 lg:flex-1">
           <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-sm">
+            <label htmlFor="applications-search" className="sr-only">
+              Search applications by company or position
+            </label>
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
+              id="applications-search"
               placeholder="Search by company or position..."
               value={search}
               onChange={(e) => handleSearchChange(e.target.value)}

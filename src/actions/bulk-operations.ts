@@ -66,7 +66,7 @@ export async function bulkUpdateStatus(
     const { data: dbUser } = await supabase
       .from('users')
       .select('id')
-      .eq('clerk_user_id', user.id)
+      .eq('auth_id', user.id)
       .single();
 
     if (!dbUser) {
@@ -137,7 +137,6 @@ export async function bulkUpdateStatus(
 
     // Revalidate relevant paths and tags
     revalidatePath('/dashboard');
-    revalidatePath('/dashboard/applications');
     revalidateTag('applications', 'max');
 
     return {
@@ -198,7 +197,7 @@ export async function bulkDeleteApplications(
     const { data: dbUser } = await supabase
       .from('users')
       .select('id')
-      .eq('clerk_user_id', user.id)
+      .eq('auth_id', user.id)
       .single();
 
     if (!dbUser) {
@@ -266,7 +265,6 @@ export async function bulkDeleteApplications(
 
     // Revalidate relevant paths and tags
     revalidatePath('/dashboard');
-    revalidatePath('/dashboard/applications');
     revalidateTag('applications', 'max');
     revalidateTag('contacts', 'max'); // In case referrals were affected
 

@@ -3,7 +3,6 @@
 import React, { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ApplicationRow } from './columns';
-import { StatusBadge } from './StatusBadge';
 import { MatchScoreBadge } from './MatchScoreBadge';
 import { ReferralBadge } from './ReferralBadge';
 import { Calendar, MapPin } from 'lucide-react';
@@ -52,6 +51,26 @@ function ApplicationCardComponent({ application }: ApplicationCardProps) {
     e.stopPropagation();
   }, []);
 
+  const isInteractiveElement = (target: EventTarget | null) =>
+    target instanceof HTMLElement &&
+    target.closest(
+      'a, button, input, textarea, select, [role="button"], [role="link"]'
+    ) !== null;
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (isInteractiveElement(event.target)) {
+        return;
+      }
+
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        handleClick();
+      }
+    },
+    [handleClick]
+  );
+
   const formatDate = (date: string | null) => {
     if (!date) return null;
     return new Date(date).toLocaleDateString('en-US', {
@@ -63,7 +82,11 @@ function ApplicationCardComponent({ application }: ApplicationCardProps) {
   return (
     <div
       onClick={handleClick}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow cursor-pointer"
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${application.company} ${application.position} details`}
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
     >
       {/* Company & Position */}
       <h3 className="font-semibold text-gray-900 dark:text-white mb-1">

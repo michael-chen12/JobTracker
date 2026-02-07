@@ -21,7 +21,7 @@ export default async function WinsPage() {
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    redirect('/login');
+    redirect('/auth/login');
   }
 
   // Fetch achievements

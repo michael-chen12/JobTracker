@@ -195,7 +195,7 @@ function DashboardClientContent({
 
   // Memoize expensive stats calculations to prevent recalculation on every render
   const stats = useMemo(() => {
-    const totalApplications = pagination.total;
+    const visibleApplications = applications.length;
     let activeApplications = 0;
     let interviewingApplications = 0;
     let offerApplications = 0;
@@ -219,7 +219,8 @@ function DashboardClientContent({
     }
 
     return {
-      total: totalApplications,
+      total: pagination.total,
+      visible: visibleApplications,
       active: activeApplications,
       interviewing: interviewingApplications,
       offers: offerApplications,
@@ -255,15 +256,18 @@ function DashboardClientContent({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
             <h3 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
-              Total Applications
+              Total Matching
             </h3>
             <p className="mt-2 text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
               {stats.total}
             </p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Showing {stats.visible} on this page
+            </p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
             <h3 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
-              Active
+              Active (Page)
             </h3>
             <p className="mt-2 text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">
               {stats.active}
@@ -271,7 +275,7 @@ function DashboardClientContent({
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
             <h3 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
-              Interviews
+              Interviews (Page)
             </h3>
             <p className="mt-2 text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-400">
               {stats.interviewing}
@@ -279,7 +283,7 @@ function DashboardClientContent({
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
             <h3 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
-              Offers
+              Offers (Page)
             </h3>
             <p className="mt-2 text-2xl sm:text-3xl font-bold text-purple-600 dark:text-purple-400">
               {stats.offers}
