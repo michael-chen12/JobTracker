@@ -12,6 +12,7 @@ import {
 } from '@/schemas/application';
 import { detectAndCelebrateAchievements } from './achievements';
 import type { CelebrationData } from '@/types/achievements';
+import type { Application } from '@/types/application';
 
 const APPLICATIONS_CACHE_TAG = 'applications';
 // Extend cache to 5 minutes for better performance (data doesn't change that frequently)
@@ -199,6 +200,17 @@ export interface GetApplicationsParams {
   tags?: string[]; // Tag IDs (AND logic - application must have ALL specified tags)
   priority?: string[];
 }
+
+export interface ApplicationsPaginationResult {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export type GetApplicationsResult =
+  | { data: Application[]; pagination: ApplicationsPaginationResult }
+  | { error: string };
 
 const getApplicationsCached = unstable_cache(
   async (dbUserId: string, params: GetApplicationsParams = {}) => {
@@ -396,7 +408,9 @@ const getApplicationCached = unstable_cache(
 /**
  * Get all applications for the current user with filtering, sorting, and pagination
  */
-export async function getApplications(params: GetApplicationsParams = {}) {
+export async function getApplications(
+  params: GetApplicationsParams = {}
+): Promise<GetApplicationsResult> {
   try {
     const supabase = await createClient();
 
