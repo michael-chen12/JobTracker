@@ -9,24 +9,24 @@ import * as Icons from 'lucide-react';
 
 interface WinCardProps {
   achievement: AchievementWithMetadata;
-  showIcon?: boolean; // Optional prop to show/hide icon
+}
+
+interface WinCardFrameProps extends WinCardProps {
+  children?: React.ReactNode;
 }
 
 /**
  * WinCard - Displays a single achievement in a card format
  *
  * Shows:
- * - Achievement icon (Lucide React icon) - optional
+ * - Achievement icon (Lucide React icon)
  * - Achievement title
  * - Personalized message
  * - Relative time (e.g., "2 days ago")
  */
-export function WinCard({ achievement, showIcon = true }: WinCardProps) {
+function WinCardFrame({ achievement, children }: WinCardFrameProps) {
   const config = getAchievementConfig(achievement.achievement_type);
   const message = config.getMessage(achievement.metadata);
-
-  // Get Lucide icon component dynamically
-  const IconComponent = Icons[config.icon as keyof typeof Icons] as React.ComponentType<{ className?: string }>;
 
   // Format relative time
   const relativeTime = formatDistanceToNow(new Date(achievement.achieved_at), {
@@ -37,10 +37,10 @@ export function WinCard({ achievement, showIcon = true }: WinCardProps) {
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          {/* Icon - conditionally rendered */}
-          {showIcon && IconComponent && (
+          {/* Icon slot */}
+          {children && (
             <div className="flex-shrink-0">
-              <IconComponent className={`h-6 w-6 ${config.iconColor}`} />
+              {children}
             </div>
           )}
 
@@ -63,4 +63,29 @@ export function WinCard({ achievement, showIcon = true }: WinCardProps) {
       </CardContent>
     </Card>
   );
+}
+
+function getWinIcon(achievement: AchievementWithMetadata): React.ReactNode {
+  const config = getAchievementConfig(achievement.achievement_type);
+  const IconComponent = Icons[
+    config.icon as keyof typeof Icons
+  ] as React.ComponentType<{ className?: string }>;
+
+  if (!IconComponent) {
+    return null;
+  }
+
+  return <IconComponent className={`h-6 w-6 ${config.iconColor}`} />;
+}
+
+export function WinCard({ achievement }: WinCardProps) {
+  const icon = getWinIcon(achievement);
+
+  return (
+    <WinCardFrame achievement={achievement}>{icon}</WinCardFrame>
+  );
+}
+
+export function CompactWinCard({ achievement }: WinCardProps) {
+  return <WinCardFrame achievement={achievement} />;
 }

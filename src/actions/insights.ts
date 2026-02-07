@@ -98,6 +98,11 @@ export async function getInsights(): Promise<{
       return { data: null, error: 'Failed to fetch applications' };
     }
 
+    if (applications.length === 0) {
+      const result = calculateInsights([], []);
+      return { data: result, error: null };
+    }
+
     // Fetch notes using admin client
     // Continue with empty array if notes fetch fails (notes are optional)
     const { data: notes } = await adminClient

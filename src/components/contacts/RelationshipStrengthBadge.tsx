@@ -17,34 +17,43 @@ import type { RelationshipStrengthResult } from '@/types/contacts';
 
 interface RelationshipStrengthBadgeProps {
   strengthData: RelationshipStrengthResult;
-  showTooltip?: boolean;
 }
 
-export function RelationshipStrengthBadge({
+export function RelationshipStrengthPill({
   strengthData,
-  showTooltip = true,
 }: RelationshipStrengthBadgeProps) {
   const { strength, recentInteractionCount } = strengthData;
   const { bg, text, icon, label } = getRelationshipStrengthColors(strength);
+  const interactionLabel =
+    recentInteractionCount === 1 ? 'interaction' : 'interactions';
 
-  const badge = (
-    <Badge className={`${bg} ${text} gap-1`}>
+  return (
+    <Badge
+      className={`${bg} ${text} gap-1`}
+      aria-label={`${label}. ${recentInteractionCount} ${interactionLabel} in last 30 days.`}
+    >
       <span>{icon}</span>
       <span>{label}</span>
     </Badge>
   );
+}
 
-  if (!showTooltip) return badge;
+export function RelationshipStrengthBadge({
+  strengthData,
+}: RelationshipStrengthBadgeProps) {
+  const { recentInteractionCount } = strengthData;
+  const interactionLabel =
+    recentInteractionCount === 1 ? 'interaction' : 'interactions';
 
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger asChild>{badge}</TooltipTrigger>
+        <TooltipTrigger asChild>
+          <RelationshipStrengthPill strengthData={strengthData} />
+        </TooltipTrigger>
         <TooltipContent>
           <p>
-            {recentInteractionCount}{' '}
-            {recentInteractionCount === 1 ? 'interaction' : 'interactions'} in
-            last 30 days
+            {recentInteractionCount} {interactionLabel} in last 30 days
           </p>
         </TooltipContent>
       </Tooltip>

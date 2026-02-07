@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ApplicationsTable } from "@/components/applications/ApplicationsTable";
 import { Plus, LayoutGrid, Table as TableIcon } from "lucide-react";
 import type { ApplicationRow } from "@/components/applications/columns";
+import type { AchievementWithMetadata } from "@/types/achievements";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   filtersToSearchParams,
@@ -60,6 +61,8 @@ interface DashboardClientProps {
   initialApplications: ApplicationRow[];
   initialPagination: DashboardPagination;
   error: string | null;
+  initialJourneyAchievements: AchievementWithMetadata[];
+  initialJourneyError: string | null;
 }
 
 export function DashboardClient({
@@ -67,6 +70,8 @@ export function DashboardClient({
   initialApplications,
   initialPagination,
   error,
+  initialJourneyAchievements,
+  initialJourneyError,
 }: DashboardClientProps) {
   return (
     <DashboardStoreProvider
@@ -77,12 +82,26 @@ export function DashboardClient({
         error,
       }}
     >
-      <DashboardClientContent userName={userName} />
+      <DashboardClientContent
+        userName={userName}
+        initialJourneyAchievements={initialJourneyAchievements}
+        initialJourneyError={initialJourneyError}
+      />
     </DashboardStoreProvider>
   );
 }
 
-function DashboardClientContent({ userName }: { userName: string }) {
+interface DashboardClientContentProps {
+  userName: string;
+  initialJourneyAchievements: AchievementWithMetadata[];
+  initialJourneyError: string | null;
+}
+
+function DashboardClientContent({
+  userName,
+  initialJourneyAchievements,
+  initialJourneyError,
+}: DashboardClientContentProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
@@ -117,18 +136,13 @@ function DashboardClientContent({ userName }: { userName: string }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const mediaQuery = window.matchMedia("(max-width: 640px)");
-    const handleChange = (event: MediaQueryListEvent | MediaQueryList) => {
+    const handleChange = (event: MediaQueryListEvent) => {
       setIsMobile(event.matches);
     };
 
-    handleChange(mediaQuery);
-    if ("addEventListener" in mediaQuery) {
-      mediaQuery.addEventListener("change", handleChange);
-      return () => mediaQuery.removeEventListener("change", handleChange);
-    }
-
-    mediaQuery.addListener(handleChange);
-    return () => mediaQuery.removeListener(handleChange);
+    setIsMobile(mediaQuery.matches);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
   // Sync URL -> store (initial load + back/forward navigation)
@@ -182,18 +196,27 @@ function DashboardClientContent({ userName }: { userName: string }) {
   // Memoize expensive stats calculations to prevent recalculation on every render
   const stats = useMemo(() => {
     const totalApplications = pagination.total;
-    const activeApplications = applications.filter(
-      (app) =>
-        app.status === "applied" ||
-        app.status === "screening" ||
-        app.status === "interviewing",
-    ).length;
-    const interviewingApplications = applications.filter(
-      (app) => app.status === "interviewing",
-    ).length;
-    const offerApplications = applications.filter(
-      (app) => app.status === "offer",
-    ).length;
+    let activeApplications = 0;
+    let interviewingApplications = 0;
+    let offerApplications = 0;
+
+    for (const application of applications) {
+      if (
+        application.status === "applied" ||
+        application.status === "screening" ||
+        application.status === "interviewing"
+      ) {
+        activeApplications += 1;
+      }
+
+      if (application.status === "interviewing") {
+        interviewingApplications += 1;
+      }
+
+      if (application.status === "offer") {
+        offerApplications += 1;
+      }
+    }
 
     return {
       total: totalApplications,
@@ -266,7 +289,10 @@ function DashboardClientContent({ userName }: { userName: string }) {
 
         {/* Your Journey Section */}
         <div className="mb-8">
-          <YourJourneySection />
+          <YourJourneySection
+            initialAchievements={initialJourneyAchievements}
+            error={initialJourneyError}
+          />
         </div>
 
         {/* Applications View */}

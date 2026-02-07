@@ -11,7 +11,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { WinCard } from './WinCard';
+import { CompactWinCard } from './WinCard';
 import { getAchievements } from '@/actions/achievements';
 import type { AchievementWithMetadata } from '@/types/achievements';
 
@@ -124,7 +124,7 @@ export function WinsSection() {
         {!loading && !error && achievements.length > 0 && (
           <div className="space-y-3">
             {achievements.map((achievement) => (
-              <WinCard key={achievement.id} achievement={achievement} showIcon={false} />
+              <CompactWinCard key={achievement.id} achievement={achievement} />
             ))}
           </div>
         )}

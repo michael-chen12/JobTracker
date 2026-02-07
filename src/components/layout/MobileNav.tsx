@@ -28,7 +28,7 @@ export default function MobileNav() {
     <>
       {/* Hamburger Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen((prev) => !prev)}
         className="lg:hidden p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
         aria-label="Toggle menu"
       >

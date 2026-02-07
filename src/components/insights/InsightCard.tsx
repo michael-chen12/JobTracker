@@ -7,24 +7,24 @@ import * as Icons from 'lucide-react';
 
 interface InsightCardProps {
   insight: InsightItem;
-  showIcon?: boolean; // Optional prop to show/hide icon
+}
+
+interface InsightCardFrameProps extends InsightCardProps {
+  children?: React.ReactNode;
 }
 
 /**
  * InsightCard - Displays a wellness/activity insight in a card format
  *
  * Shows:
- * - Insight icon (Lucide React icon) - optional
+ * - Insight icon (Lucide React icon)
  * - Insight title
  * - Insight message
  * - Severity-based left border (info=blue, warning=amber, critical=red)
  *
  * Note: Unlike WinCard, InsightCard does NOT display timestamp
  */
-export function InsightCard({ insight, showIcon = true }: InsightCardProps) {
-  // Get Lucide icon component dynamically
-  const IconComponent = Icons[insight.icon as keyof typeof Icons] as React.ComponentType<{ className?: string }>;
-
+function InsightCardFrame({ insight, children }: InsightCardFrameProps) {
   // Map severity to border color
   const severityBorderClass = {
     info: 'border-blue-200',
@@ -36,10 +36,10 @@ export function InsightCard({ insight, showIcon = true }: InsightCardProps) {
     <Card className={`hover:shadow-md transition-shadow border-l-4 ${severityBorderClass}`}>
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          {/* Icon - conditionally rendered */}
-          {showIcon && IconComponent && (
+          {/* Icon slot */}
+          {children && (
             <div className="flex-shrink-0" data-testid="insight-icon">
-              <IconComponent className={`h-6 w-6 ${insight.iconColor}`} />
+              {children}
             </div>
           )}
 
@@ -59,4 +59,28 @@ export function InsightCard({ insight, showIcon = true }: InsightCardProps) {
       </CardContent>
     </Card>
   );
+}
+
+function getInsightIcon(insight: InsightItem): React.ReactNode {
+  const IconComponent = Icons[
+    insight.icon as keyof typeof Icons
+  ] as React.ComponentType<{ className?: string }>;
+
+  if (!IconComponent) {
+    return null;
+  }
+
+  return <IconComponent className={`h-6 w-6 ${insight.iconColor}`} />;
+}
+
+export function InsightCard({ insight }: InsightCardProps) {
+  const icon = getInsightIcon(insight);
+
+  return (
+    <InsightCardFrame insight={insight}>{icon}</InsightCardFrame>
+  );
+}
+
+export function CompactInsightCard({ insight }: InsightCardProps) {
+  return <InsightCardFrame insight={insight} />;
 }

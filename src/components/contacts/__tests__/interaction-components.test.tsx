@@ -8,7 +8,10 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { InteractionTypeBadge } from '@/components/contacts/InteractionTypeBadge';
-import { RelationshipStrengthBadge } from '@/components/contacts/RelationshipStrengthBadge';
+import {
+  RelationshipStrengthBadge,
+  RelationshipStrengthPill,
+} from '@/components/contacts/RelationshipStrengthBadge';
 import { InteractionsList } from '@/components/contacts/InteractionsList';
 import type {
   ContactInteraction,
@@ -98,15 +101,13 @@ describe('RelationshipStrengthBadge', () => {
     expect(screen.getByText('Strong')).toBeInTheDocument();
   });
 
-  test('should show tooltip with interaction count when showTooltip is true', async () => {
+  test('should show tooltip with interaction count in badge variant', async () => {
     const strengthData: RelationshipStrengthResult = {
       strength: 'warm',
       recentInteractionCount: 2,
     };
 
-    render(
-      <RelationshipStrengthBadge strengthData={strengthData} showTooltip />
-    );
+    render(<RelationshipStrengthBadge strengthData={strengthData} />);
 
     // Verify badge renders (tooltip testing requires proper provider setup)
     const badge = screen.getByText('Warm');
@@ -114,18 +115,13 @@ describe('RelationshipStrengthBadge', () => {
     expect(screen.getByText('🔥')).toBeInTheDocument();
   });
 
-  test('should not show tooltip when showTooltip is false', () => {
+  test('should not show tooltip in pill variant', () => {
     const strengthData: RelationshipStrengthResult = {
       strength: 'warm',
       recentInteractionCount: 2,
     };
 
-    render(
-      <RelationshipStrengthBadge
-        strengthData={strengthData}
-        showTooltip={false}
-      />
-    );
+    render(<RelationshipStrengthPill strengthData={strengthData} />);
 
     // Tooltip content should not be in the document
     expect(
@@ -139,9 +135,7 @@ describe('RelationshipStrengthBadge', () => {
       recentInteractionCount: 1,
     };
 
-    render(
-      <RelationshipStrengthBadge strengthData={strengthData} showTooltip />
-    );
+    render(<RelationshipStrengthBadge strengthData={strengthData} />);
 
     // Verify badge renders with correct strength
     expect(screen.getByText('Warm')).toBeInTheDocument();

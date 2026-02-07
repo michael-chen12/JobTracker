@@ -4,7 +4,7 @@ import { ArrowUpDown } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { StatusBadge } from './StatusBadge';
 import { MatchScoreBadge } from './MatchScoreBadge';
-import { ReferralBadge } from './ReferralBadge';
+import { ReferralBadge, ReferralContactBadge } from './ReferralBadge';
 
 export interface ApplicationRow {
   id: string;
@@ -172,12 +172,15 @@ export const columns: ColumnDef<ApplicationRow>[] = [
 
       return (
         <div onClick={(e) => e.stopPropagation()}>
-          <ReferralBadge
-            contactId={referralContactId}
-            contactName={referralContactName || undefined}
-            size="md"
-            showContactName={true}
-          />
+          {referralContactName ? (
+            <ReferralContactBadge
+              contactId={referralContactId}
+              contactName={referralContactName}
+              size="md"
+            />
+          ) : (
+            <ReferralBadge contactId={referralContactId} size="md" />
+          )}
         </div>
       );
     },

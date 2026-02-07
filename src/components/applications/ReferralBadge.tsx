@@ -6,20 +6,27 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 interface ReferralBadgeProps {
-  contactName?: string;
   contactId?: string;
   size?: 'sm' | 'md';
-  showContactName?: boolean;
   className?: string;
 }
 
-export function ReferralBadge({
-  contactName,
+interface ReferralBadgeFrameProps extends ReferralBadgeProps {
+  ariaLabel: string;
+  children: React.ReactNode;
+}
+
+interface ReferralContactBadgeProps extends ReferralBadgeProps {
+  contactName: string;
+}
+
+function ReferralBadgeFrame({
   contactId,
   size = 'sm',
-  showContactName = false,
   className,
-}: ReferralBadgeProps) {
+  ariaLabel,
+  children,
+}: ReferralBadgeFrameProps) {
   const router = useRouter();
 
   const handleClick = (e: React.MouseEvent) => {
@@ -48,10 +55,7 @@ export function ReferralBadge({
       onClick={handleClick}
       role="link"
       tabIndex={0}
-      aria-label={contactName
-        ? `Referral from ${contactName}. Click to view contact details.`
-        : 'Referral. Click to view contact details.'
-      }
+      aria-label={ariaLabel}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -59,17 +63,47 @@ export function ReferralBadge({
         }
       }}
     >
-      <Users className="h-3 w-3 mr-1" />
-      {showContactName && contactName ? (
-        <>
-          <span className="sm:hidden">Referral</span>
-          <span className="hidden sm:inline truncate max-w-[120px]">
-            {contactName}
-          </span>
-        </>
-      ) : (
-        <span>Referral</span>
-      )}
+      {children}
     </Badge>
+  );
+}
+
+export function ReferralBadge({
+  contactId,
+  size = 'sm',
+  className,
+}: ReferralBadgeProps) {
+  return (
+    <ReferralBadgeFrame
+      contactId={contactId}
+      size={size}
+      className={className}
+      ariaLabel="Referral. Click to view contact details."
+    >
+      <Users className="h-3 w-3 mr-1" />
+      <span>Referral</span>
+    </ReferralBadgeFrame>
+  );
+}
+
+export function ReferralContactBadge({
+  contactName,
+  contactId,
+  size = 'sm',
+  className,
+}: ReferralContactBadgeProps) {
+  return (
+    <ReferralBadgeFrame
+      contactId={contactId}
+      size={size}
+      className={className}
+      ariaLabel={`Referral from ${contactName}. Click to view contact details.`}
+    >
+      <Users className="h-3 w-3 mr-1" />
+      <span className="sm:hidden">Referral</span>
+      <span className="hidden sm:inline truncate max-w-[120px]">
+        {contactName}
+      </span>
+    </ReferralBadgeFrame>
   );
 }

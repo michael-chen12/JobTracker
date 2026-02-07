@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { AnalyticsData, DateRangeFilter } from '@/types/analytics';
 import type { InsightsResult } from '@/types/insights';
@@ -8,7 +8,6 @@ import { MetricCard } from './MetricCard';
 import { DateRangeSelector } from './DateRangeSelector';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getInsights } from '@/actions/insights';
 
 // Lazy load chart components (they use recharts which is ~100KB)
 const ApplicationTrendsChart = dynamic(
@@ -42,35 +41,23 @@ const WeeklyActivitySummary = dynamic(
 interface AnalyticsDashboardProps {
   initialData: AnalyticsData;
   initialRange: DateRangeFilter;
+  initialInsights: InsightsResult | null;
 }
 
-export function AnalyticsDashboard({ initialData, initialRange }: AnalyticsDashboardProps) {
+export function AnalyticsDashboard({
+  initialData,
+  initialRange,
+  initialInsights,
+}: AnalyticsDashboardProps) {
   const [dateRange, setDateRange] = useState<DateRangeFilter>(initialRange);
   const [data, setData] = useState<AnalyticsData>(initialData);
   const [isLoading, setIsLoading] = useState(false);
-  const [insights, setInsights] = useState<InsightsResult | null>(null);
-  const [insightsLoading, setInsightsLoading] = useState(true);
-
-  // Fetch insights on mount
-  useEffect(() => {
-    const fetchInsights = async () => {
-      setInsightsLoading(true);
-      try {
-        const result = await getInsights();
-        if (result.data) {
-          setInsights(result.data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch insights:', error);
-      } finally {
-        setInsightsLoading(false);
-      }
-    };
-
-    fetchInsights();
-  }, []);
 
   const handleDateRangeChange = async (range: DateRangeFilter) => {
+    if (range === dateRange) {
+      return;
+    }
+
     setDateRange(range);
     setIsLoading(true);
 
@@ -113,12 +100,12 @@ export function AnalyticsDashboard({ initialData, initialRange }: AnalyticsDashb
         )}
 
         {/* Weekly Activity Summary */}
-        {!insightsLoading && insights && (
+        {initialInsights ? (
           <WeeklyActivitySummary
-            weeklyActivity={insights.weeklyActivity}
-            baseline={insights.baseline}
+            weeklyActivity={initialInsights.weeklyActivity}
+            baseline={initialInsights.baseline}
           />
-        )}
+        ) : null}
 
         {/* Metrics Cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">

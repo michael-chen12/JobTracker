@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { ResumeUpload } from '@/components/profile/ResumeUpload';
 import { ParsedResumeDisplay } from '@/components/profile/ParsedResumeDisplay';
 import { FormSection } from '@/components/applications/FormSection';
-import { User, FileText, Settings, AlertCircle } from 'lucide-react';
+import { User, Settings, AlertCircle } from 'lucide-react';
 import { RetryParsingButton } from '@/components/profile/RetryParsingButton';
 
 export default async function ProfilePage() {

@@ -17,8 +17,10 @@ export default async function DashboardLayout({
     if (!email) return 'U';
     const name = email.split('@')[0] ?? email;
     const parts = name.split(/[^a-zA-Z0-9]+/).filter(Boolean);
+    const firstInitial = parts[0]?.[0] ?? name[0] ?? 'U';
+    const secondInitial = parts[1]?.[0] ?? name[1] ?? '';
     const initials =
-      parts.length >= 2 ? `${parts[0][0]}${parts[1][0]}` : name.slice(0, 2);
+      parts.length >= 2 ? `${firstInitial}${secondInitial}` : name.slice(0, 2);
     return initials.toUpperCase();
   };
 

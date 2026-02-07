@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { InsightCard } from '../InsightCard';
+import { CompactInsightCard, InsightCard } from '../InsightCard';
 import type { InsightItem } from '@/types/insights';
 
 describe('InsightCard', () => {
@@ -22,16 +22,16 @@ describe('InsightCard', () => {
     expect(screen.getByText('You applied to 5 companies this week')).toBeInTheDocument();
   });
 
-  it('renders icon when showIcon is true', () => {
-    render(<InsightCard insight={mockInsight} showIcon={true} />);
+  it('renders icon in default card variant', () => {
+    render(<InsightCard insight={mockInsight} />);
 
     // Icon should be rendered - check for svg element with specific class
     const iconContainer = screen.getByTestId('insight-icon');
     expect(iconContainer).toBeInTheDocument();
   });
 
-  it('does not render icon when showIcon is false', () => {
-    render(<InsightCard insight={mockInsight} showIcon={false} />);
+  it('does not render icon in compact variant', () => {
+    render(<CompactInsightCard insight={mockInsight} />);
 
     // Icon should not be rendered
     const iconContainer = screen.queryByTestId('insight-icon');
@@ -73,7 +73,7 @@ describe('InsightCard', () => {
   });
 
   it('renders icon with correct color class', () => {
-    render(<InsightCard insight={mockInsight} showIcon={true} />);
+    render(<InsightCard insight={mockInsight} />);
 
     const iconContainer = screen.getByTestId('insight-icon');
     const icon = iconContainer.querySelector('svg');

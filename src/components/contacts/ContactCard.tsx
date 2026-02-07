@@ -112,7 +112,6 @@ function ContactCardComponent({ contact, onUpdate, onDelete }: ContactCardProps)
                 strength: contact.relationship_strength,
                 recentInteractionCount: contact.interaction_count,
               }}
-              showTooltip
             />
           )}
         </div>

@@ -1,19 +1,17 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown, ArrowRight, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { WinCard } from '@/components/achievements/WinCard';
-import { InsightCard } from '@/components/insights/InsightCard';
-import { getAchievements } from '@/actions/achievements';
+import { CompactWinCard } from '@/components/achievements/WinCard';
+import { CompactInsightCard } from '@/components/insights/InsightCard';
 import type { AchievementWithMetadata } from '@/types/achievements';
 import type { InsightItem } from '@/types/insights';
 
@@ -24,77 +22,50 @@ type JourneyItem =
   | { type: 'achievement'; data: AchievementWithMetadata; timestamp: Date }
   | { type: 'insight'; data: InsightItem; timestamp: Date };
 
+interface YourJourneySectionProps {
+  initialAchievements?: AchievementWithMetadata[];
+  error?: string | null;
+}
+
+const EMPTY_ACHIEVEMENTS: AchievementWithMetadata[] = [];
+const EMPTY_INSIGHTS: InsightItem[] = [];
+
 /**
  * YourJourneySection - Dashboard widget showing recent achievements and insights
  *
  * Features:
  * - Displays combined timeline of achievements and insights
- * - Fetches top 10 achievements and insights in parallel
+ * - Receives prefetched achievements from the server
  * - Sorts by timestamp (newest first) and displays top 5
- * - Loading skeleton while fetching
  * - Empty state with encouraging message
  * - "View All" link to full journey page
  * - Collapsible with Sparkles icon
  */
-export function YourJourneySection() {
-  const [journeyItems, setJourneyItems] = useState<JourneyItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function YourJourneySection({
+  initialAchievements = EMPTY_ACHIEVEMENTS,
+  error = null,
+}: YourJourneySectionProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  useEffect(() => {
-    async function fetchJourneyData() {
-      try {
-        // Fetch achievements and insights in parallel
-        const [achievementsResult] = await Promise.all([
-          getAchievements(10), // Top 10 achievements
-          // TODO: Add getInsights(10) when Task 8 is complete
-        ]);
+  const journeyItems = useMemo<JourneyItem[]>(() => {
+    const combined: JourneyItem[] = [
+      ...initialAchievements.map((achievement) => ({
+        type: 'achievement' as const,
+        data: achievement,
+        timestamp: new Date(achievement.achieved_at),
+      })),
+      // TODO: Merge prefetched insights once insights are added to dashboard payload.
+      ...EMPTY_INSIGHTS.map((insight) => ({
+        type: 'insight' as const,
+        data: insight,
+        timestamp: insight.createdAt,
+      })),
+    ];
 
-        // Process achievements
-        const achievements: AchievementWithMetadata[] = [];
-        if ('data' in achievementsResult && achievementsResult.data) {
-          achievements.push(...achievementsResult.data);
-        } else if ('error' in achievementsResult && achievementsResult.error) {
-          setError(achievementsResult.error);
-          setLoading(false);
-          return;
-        }
-
-        // Process insights (placeholder for Task 8)
-        const insights: InsightItem[] = [];
-        // TODO: Process insights result when Task 8 is complete
-
-        // Combine achievements and insights into unified timeline
-        const combined: JourneyItem[] = [
-          ...achievements.map((achievement) => ({
-            type: 'achievement' as const,
-            data: achievement,
-            timestamp: new Date(achievement.achieved_at),
-          })),
-          ...insights.map((insight) => ({
-            type: 'insight' as const,
-            data: insight,
-            timestamp: insight.createdAt,
-          })),
-        ];
-
-        // Sort by timestamp (newest first) and take top 5
-        const sortedItems = combined
-          .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-          .slice(0, 5);
-
-        setJourneyItems(sortedItems);
-      } catch (err) {
-        setError('Failed to load your journey');
-        console.error('Error fetching journey data:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchJourneyData();
-  }, []);
+    return combined
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, 5);
+  }, [initialAchievements]);
 
   return (
     <Card>
@@ -110,7 +81,7 @@ export function YourJourneySection() {
               <Sparkles className="h-5 w-5 text-purple-500" />
               <CardTitle className="text-base sm:text-lg">Your Journey</CardTitle>
             </CollapsibleTrigger>
-            {!loading && journeyItems.length > 0 && (
+            {journeyItems.length > 0 ? (
               <Button
                 variant="ghost"
                 size="sm"
@@ -123,71 +94,50 @@ export function YourJourneySection() {
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
-            )}
+            ) : null}
           </div>
         </CardHeader>
 
         <CollapsibleContent>
           <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
-            {/* Loading state */}
-            {loading && (
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <Card key={i}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-1 space-y-2">
-                          <Skeleton className="h-4 w-3/4" />
-                          <Skeleton className="h-3 w-full" />
-                          <Skeleton className="h-3 w-1/4" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-
             {/* Error state */}
-            {!loading && error && (
+            {error ? (
               <p className="text-sm text-muted-foreground text-center py-8">
                 {error}
               </p>
-            )}
+            ) : null}
 
             {/* Empty state */}
-            {!loading && !error && journeyItems.length === 0 && (
+            {!error && journeyItems.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-sm text-muted-foreground">
                   Your journey starts here. Create your first application!
                 </p>
               </div>
-            )}
+            ) : null}
 
             {/* Journey items list */}
-            {!loading && !error && journeyItems.length > 0 && (
+            {!error && journeyItems.length > 0 ? (
               <div className="space-y-3">
-                {journeyItems.map((item, index) => {
+                {journeyItems.map((item) => {
                   if (item.type === 'achievement') {
                     return (
-                      <WinCard
+                      <CompactWinCard
                         key={`achievement-${item.data.id}`}
                         achievement={item.data}
-                        showIcon={false}
                       />
                     );
                   } else {
                     return (
-                      <InsightCard
+                      <CompactInsightCard
                         key={`insight-${item.data.id}`}
                         insight={item.data}
-                        showIcon={false}
                       />
                     );
                   }
                 })}
               </div>
-            )}
+            ) : null}
           </CardContent>
         </CollapsibleContent>
       </Collapsible>

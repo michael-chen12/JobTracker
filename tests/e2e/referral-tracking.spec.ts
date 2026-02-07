@@ -86,7 +86,7 @@ test.describe('Referral Tracking - Manual Testing Guide', () => {
      *
      * 2. Responsive Behavior:
      *    - ✓ Mobile (< 640px): Shows "Referral" text only
-     *    - ✓ Desktop (≥ 640px): Shows contact name (when showContactName=true)
+     *    - ✓ Desktop (≥ 640px): ReferralContactBadge shows contact name
      *    - ✓ Text truncates with max-w-[120px]
      *
      * 3. Interactivity:
@@ -104,10 +104,9 @@ test.describe('Referral Tracking - Manual Testing Guide', () => {
      *
      * 5. Props:
      *    - contactId: string | undefined
-     *    - contactName: string | undefined
      *    - size: 'sm' | 'md' (default: 'sm')
-     *    - showContactName: boolean (default: false)
      *    - className: string | undefined
+     *    - ReferralContactBadge only: contactName: string
      */
     expect(true).toBe(true);
   });

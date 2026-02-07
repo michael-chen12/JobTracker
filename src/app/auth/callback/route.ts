@@ -30,23 +30,17 @@ export async function GET(request: Request) {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
-        // Check if user record exists in our users table
-        const { data: existingUser } = await supabase
-          .from('users')
-          .select('id')
-          .eq('auth_id', user.id)
-          .single();
-
-        // Create user record if it doesn't exist (first-time login)
-        if (!existingUser) {
-          await supabase.from('users').insert({
+        // Upsert avoids an extra round trip (select + insert) on each login.
+        await supabase.from('users').upsert(
+          {
             auth_id: user.id,
             email: user.email!,
             display_name: user.user_metadata.full_name || user.email!.split('@')[0],
             photo_url: user.user_metadata.avatar_url,
             role: 'user',
-          });
-        }
+          },
+          { onConflict: 'auth_id' }
+        );
       }
 
       // Successful authentication - redirect to dashboard
