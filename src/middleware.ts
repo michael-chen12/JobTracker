@@ -8,6 +8,7 @@ import { NextResponse, type NextRequest } from 'next/server';
  * 1. Refreshes expired auth tokens automatically
  * 2. Protects routes that require authentication
  * 3. Redirects unauthenticated users to login
+ * 4. Redirects authenticated users away from login/forgot-password
  */
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -23,7 +24,7 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
           supabaseResponse = NextResponse.next({
@@ -59,12 +60,23 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect to dashboard if already authenticated and trying to access login
-  if (request.nextUrl.pathname === '/auth/login' && user) {
+  // Auth pages where logged-in users should be redirected to dashboard
+  const authRedirectPaths = ['/auth/login', '/auth/forgot-password'];
+  const isAuthRedirectPath = authRedirectPaths.some(
+    (path) => request.nextUrl.pathname === path
+  );
+
+  if (isAuthRedirectPath && user) {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);
   }
+
+  // Auth pages that allow logged-in users (no redirect):
+  // /auth/reset-password — user has recovery session
+  // /auth/onboarding — user just confirmed email
+  // /auth/callback — OAuth code exchange
+  // /auth/confirm — email OTP verification
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
   // creating a new response object with NextResponse.next() make sure to:

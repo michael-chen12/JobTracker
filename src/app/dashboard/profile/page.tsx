@@ -2,9 +2,11 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { ResumeUpload } from '@/components/profile/ResumeUpload';
 import { ParsedResumeDisplay } from '@/components/profile/ParsedResumeDisplay';
+import { DataPrivacySection } from '@/components/profile/DataPrivacySection';
 import { FormSection } from '@/components/applications/FormSection';
-import { User, Settings, AlertCircle } from 'lucide-react';
+import { User, AlertCircle } from 'lucide-react';
 import { RetryParsingButton } from '@/components/profile/RetryParsingButton';
+import type { AccountDeletionRequest } from '@/types/application';
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -44,6 +46,19 @@ export default async function ProfilePage() {
       .createSignedUrl(profile.resume_url, 3600); // 1 hour expiry
     
     resumeSignedUrl = signedUrlData?.signedUrl || null;
+  }
+
+  // Check for pending account deletion request
+  let deletionRequest: AccountDeletionRequest | null = null;
+  const { data: deletionData } = await supabase
+    .from('account_deletion_requests')
+    .select('*')
+    .eq('user_id', dbUser.id)
+    .eq('status', 'pending')
+    .maybeSingle();
+
+  if (deletionData) {
+    deletionRequest = deletionData as AccountDeletionRequest;
   }
 
   return (
@@ -144,24 +159,12 @@ export default async function ProfilePage() {
             </div>
           )}
 
-          {/* Coming Soon Card */}
+          {/* Data & Privacy Card */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <FormSection
-              label="Personal Information"
-              description="Additional profile details and preferences"
-            >
-              <div className="flex items-center justify-center p-12 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
-                <div className="text-center">
-                  <Settings className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600 mb-3" />
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                    Coming Soon
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Additional profile settings will be available here
-                  </p>
-                </div>
-              </div>
-            </FormSection>
+            <DataPrivacySection
+              userEmail={user.email!}
+              initialDeletionRequest={deletionRequest}
+            />
           </div>
         </div>
       </div>

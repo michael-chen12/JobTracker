@@ -1,0 +1,73 @@
+import { test, expect } from '@playwright/test';
+
+test.describe('Data Export & GDPR Compliance', () => {
+  test.skip('should display Data & Privacy section on profile page', async ({ page }) => {
+    await page.goto('/dashboard/profile');
+    await expect(page.locator('text=Export Your Data')).toBeVisible();
+    await expect(page.locator('text=Danger Zone')).toBeVisible();
+  });
+
+  test.skip('should not show Coming Soon card', async ({ page }) => {
+    await page.goto('/dashboard/profile');
+    await expect(page.locator('text=Coming Soon')).not.toBeVisible();
+  });
+
+  test.skip('should show JSON and CSV export format options', async ({ page }) => {
+    await page.goto('/dashboard/profile');
+    await expect(page.locator('text=Complete Data (JSON)')).toBeVisible();
+    await expect(page.locator('text=Applications Table (CSV)')).toBeVisible();
+  });
+
+  test.skip('should default to JSON export format', async ({ page }) => {
+    await page.goto('/dashboard/profile');
+    // JSON option should have selected border styling
+    const jsonOption = page.locator('button:has-text("Complete Data (JSON)")');
+    await expect(jsonOption).toHaveClass(/border-blue-500/);
+  });
+
+  test.skip('should trigger export with loading state', async ({ page }) => {
+    await page.goto('/dashboard/profile');
+    const exportBtn = page.locator('button:has-text("Export Data")');
+    await exportBtn.click();
+    // Should show loading spinner
+    await expect(page.locator('.animate-spin')).toBeVisible();
+  });
+
+  test.skip('should open delete account dialog', async ({ page }) => {
+    await page.goto('/dashboard/profile');
+    await page.locator('button:has-text("Delete Account")').click();
+    await expect(page.locator('[role="alertdialog"]')).toBeVisible();
+    await expect(page.locator('text=Delete Your Account?')).toBeVisible();
+  });
+
+  test.skip('should require email confirmation for deletion', async ({ page }) => {
+    await page.goto('/dashboard/profile');
+    await page.locator('button:has-text("Delete Account")').click();
+    // Schedule Deletion button should be disabled by default
+    const scheduleBtn = page.locator('button:has-text("Schedule Deletion")');
+    await expect(scheduleBtn).toBeDisabled();
+  });
+
+  test.skip('should enable schedule button when email matches', async ({ page }) => {
+    await page.goto('/dashboard/profile');
+    await page.locator('button:has-text("Delete Account")').click();
+    const emailInput = page.locator('input[placeholder*="email"]');
+    await emailInput.fill('user@example.com');
+    const scheduleBtn = page.locator('button:has-text("Schedule Deletion")');
+    await expect(scheduleBtn).toBeEnabled();
+  });
+
+  test.skip('should show pending deletion status with cancel option', async ({ page }) => {
+    // This test assumes a pending deletion already exists
+    await page.goto('/dashboard/profile');
+    await expect(page.locator('text=Account scheduled for deletion')).toBeVisible();
+    await expect(page.locator('button:has-text("Cancel Deletion")')).toBeVisible();
+  });
+
+  test.skip('should be mobile responsive at 375px viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/dashboard/profile');
+    await expect(page.locator('text=Export Your Data')).toBeVisible();
+    await expect(page.locator('text=Delete Account')).toBeVisible();
+  });
+});

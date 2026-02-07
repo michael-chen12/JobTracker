@@ -182,6 +182,33 @@ export const CORRESPONDENCE_DIRECTION_LABELS: Record<string, string> = {
 
 export type CreateCorrespondenceInput = z.infer<typeof createCorrespondenceSchema>;
 
+// Data Export validation (Ticket #26: Export & GDPR Compliance)
+export const exportTypeSchema = z.enum(['json', 'csv']);
+
+export const requestDataExportSchema = z.object({
+  export_type: exportTypeSchema,
+});
+
+export type RequestDataExportInput = z.infer<typeof requestDataExportSchema>;
+
+// Account Deletion validation (Ticket #26: Export & GDPR Compliance)
+export const requestAccountDeletionSchema = z.object({
+  confirmation_email: z.string().email('Must be a valid email'),
+  reason: z
+    .string()
+    .max(500, 'Reason must be 500 characters or less')
+    .optional()
+    .transform((val) => {
+      if (!val) return undefined;
+      const trimmed = val.trim();
+      return trimmed || undefined;
+    }),
+});
+
+export type RequestAccountDeletionInput = z.infer<typeof requestAccountDeletionSchema>;
+
+export const DELETION_GRACE_PERIOD_DAYS = 30;
+
 // Type inference from schemas
 export type CreateApplicationInput = z.infer<typeof createApplicationSchema>;
 export type UpdateApplicationInput = z.infer<typeof updateApplicationSchema>;

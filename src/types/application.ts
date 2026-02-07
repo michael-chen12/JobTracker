@@ -38,6 +38,35 @@ export type ApplicationCorrespondence = {
   updated_at: string;
 };
 
+// Data Export types (Ticket #26: Export & GDPR Compliance)
+export type ExportType = 'json' | 'csv';
+export type ExportStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+export type DataExportRequest = {
+  id: string;
+  user_id: string;
+  export_type: ExportType;
+  status: ExportStatus;
+  file_path: string | null;
+  error_message: string | null;
+  created_at: string;
+  completed_at: string | null;
+  expires_at: string | null;
+};
+
+// Account Deletion types (Ticket #26: Export & GDPR Compliance)
+export type DeletionStatus = 'pending' | 'cancelled' | 'processing' | 'completed';
+
+export type AccountDeletionRequest = {
+  id: string;
+  user_id: string;
+  status: DeletionStatus;
+  reason: string | null;
+  scheduled_deletion_at: string;
+  cancelled_at: string | null;
+  created_at: string;
+};
+
 // Manual Tag type definition (until database types are regenerated)
 export type Tag = {
   id: string;
