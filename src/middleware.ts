@@ -60,8 +60,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Auth pages where logged-in users should be redirected to dashboard
-  const authRedirectPaths = ['/auth/login', '/auth/forgot-password'];
+  // Pages where logged-in users should be redirected to dashboard
+  const authRedirectPaths = ['/', '/auth/login', '/auth/forgot-password'];
   const isAuthRedirectPath = authRedirectPaths.some(
     (path) => request.nextUrl.pathname === path
   );

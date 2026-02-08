@@ -7,8 +7,8 @@ export default function ContactsPage() {
   return (
     <div className="container mx-auto py-6 px-4 md:px-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Contacts</h1>
-        <p className="text-muted-foreground mt-2">
+        <h1 className="text-2xl sm:text-3xl font-bold">Contacts</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-2">
           Manage your professional network and referrals
         </p>
       </div>

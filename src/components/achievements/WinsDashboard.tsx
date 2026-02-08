@@ -19,13 +19,13 @@ interface WinsDashboardProps {
  */
 export function WinsDashboard({ achievements }: WinsDashboardProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Trophy className="h-8 w-8 text-yellow-500" />
+        <Trophy className="h-7 w-7 sm:h-8 sm:w-8 text-yellow-500" />
         <div>
-          <h1 className="text-3xl font-bold">Your Achievements</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold">Your Achievements</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Celebrate your job search milestones and progress
           </p>
         </div>

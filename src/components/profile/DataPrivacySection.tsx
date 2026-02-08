@@ -15,7 +15,7 @@ export function DataPrivacySection({
   initialDeletionRequest,
 }: DataPrivacySectionProps) {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <FormSection
         label="Export Your Data"
         description="Download a copy of all your data in JSON or CSV format"

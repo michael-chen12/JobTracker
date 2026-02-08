@@ -11,6 +11,7 @@ import {
   type CreateNoteInput,
 } from '@/schemas/application';
 import { detectAndCelebrateAchievements } from './achievements';
+import { triggerNotification } from '@/lib/notifications/trigger';
 import type { CelebrationData } from '@/types/achievements';
 import type { Application } from '@/types/application';
 
@@ -136,6 +137,28 @@ export async function updateApplication(id: string, data: UpdateApplicationInput
     const achievementResult = await detectAndCelebrateAchievements(id);
     const celebrationData: CelebrationData[] =
       achievementResult.data?.celebrationData || [];
+
+    // Trigger notification for status changes to interview/offer
+    if (validatedData.status === 'interviewing' || validatedData.status === 'offer') {
+      // Get DB user ID for notification
+      const { data: dbUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+
+      if (dbUser) {
+        const isOffer = validatedData.status === 'offer';
+        triggerNotification({
+          userId: dbUser.id,
+          type: isOffer ? 'offer' : 'interview',
+          title: `${isOffer ? 'Offer Received' : 'Interview Stage'}: ${application.company}`,
+          message: `Your application for ${application.position} at ${application.company} moved to ${validatedData.status}.`,
+          relatedApplicationId: application.id,
+          actionUrl: `/dashboard/${application.id}`,
+        }).catch((err) => console.error('Notification trigger error:', err));
+      }
+    }
 
     return { data: application, celebrationData };
   } catch (error) {

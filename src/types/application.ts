@@ -110,7 +110,7 @@ export type ContactType = 'recruiter' | 'hiring_manager' | 'referral' | 'colleag
 
 export type InteractionType = 'email' | 'call' | 'meeting' | 'linkedin_message' | 'other';
 
-export type NotificationType = 'deadline' | 'follow_up' | 'interview' | 'offer' | 'general';
+export type NotificationType = 'deadline' | 'follow_up' | 'interview' | 'offer' | 'general' | 'achievement' | 'weekly_digest';
 
 export type MilestoneType =
   | 'phone_screen'

@@ -197,20 +197,21 @@ export function ResumeUpload({ currentResumeUrl, isParsed = false }: ResumeUploa
 
       {resumeUrl ? (
         <div className="space-y-3">
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div className="flex items-center gap-3">
-              <FileText className="h-8 w-8 text-blue-600" />
-              <div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border rounded-lg">
+            <div className="flex items-center gap-3 min-w-0">
+              <FileText className="h-8 w-8 text-blue-600 flex-shrink-0" />
+              <div className="min-w-0">
                 <p className="font-medium">Current Resume</p>
                 <p className="text-sm text-gray-500">Uploaded successfully</p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 sm:flex-shrink-0">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => window.open(resumeUrl, '_blank')}
                 disabled={!resumeUrl}
+                className="w-full sm:w-auto"
               >
                 <FileText className="mr-2 h-4 w-4" />
                 View Resume
@@ -220,6 +221,7 @@ export function ResumeUpload({ currentResumeUrl, isParsed = false }: ResumeUploa
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading || parsingStatus === 'processing'}
+                className="w-full sm:w-auto"
               >
                 <Upload className="mr-2 h-4 w-4" />
                 Replace
@@ -230,6 +232,7 @@ export function ResumeUpload({ currentResumeUrl, isParsed = false }: ResumeUploa
                     variant="outline"
                     size="sm"
                     disabled={deleting || parsingStatus === 'processing'}
+                    className="w-full sm:w-auto"
                   >
                     <X className="mr-2 h-4 w-4" />
                     Delete

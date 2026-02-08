@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { ApplicationsTable } from "@/components/applications/ApplicationsTable";
+import { MobileApplicationList } from "@/components/applications/MobileApplicationList";
 import { Plus, LayoutGrid, Table as TableIcon } from "lucide-react";
 import type { ApplicationRow } from "@/components/applications/columns";
 import type { AchievementWithMetadata } from "@/types/achievements";
@@ -18,6 +19,8 @@ import {
   useDashboardStore,
   type DashboardPagination,
 } from "@/stores/dashboard-store";
+import { useIsMobile } from "@/hooks/useMediaQuery";
+import { useApplicationDialogStore } from "@/stores/application-dialog-store";
 
 // Lazy load heavy components to reduce initial bundle size
 const ApplicationFormDialog = dynamic(
@@ -102,8 +105,9 @@ function DashboardClientContent({
   initialJourneyAchievements,
   initialJourneyError,
 }: DashboardClientContentProps) {
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const dialogOpen = useApplicationDialogStore((s) => s.open);
+  const setDialogOpen = useApplicationDialogStore((s) => s.setOpen);
+  const isMobile = useIsMobile();
   const router = useRouter();
   const searchParams = useSearchParams();
   const searchParamString = searchParams.toString();
@@ -131,19 +135,6 @@ function DashboardClientContent({
       setViewMode(savedView);
     }
   }, [setViewMode]);
-
-  // Track mobile breakpoint to force table view
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mediaQuery = window.matchMedia("(max-width: 640px)");
-    const handleChange = (event: MediaQueryListEvent) => {
-      setIsMobile(event.matches);
-    };
-
-    setIsMobile(mediaQuery.matches);
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, []);
 
   // Sync URL -> store (initial load + back/forward navigation)
   useEffect(() => {
@@ -245,7 +236,7 @@ function DashboardClientContent({
           <Button
             onClick={() => setDialogOpen(true)}
             size="lg"
-            className="w-full max-w-full sm:w-auto"
+            className="hidden sm:flex w-auto"
           >
             <Plus className="h-5 w-5 mr-2" />
             New Application
@@ -345,6 +336,8 @@ function DashboardClientContent({
                 Create Your First Application
               </Button>
             </div>
+          ) : isMobile ? (
+            <MobileApplicationList />
           ) : activeViewMode === "table" ? (
             <ApplicationsTable />
           ) : (

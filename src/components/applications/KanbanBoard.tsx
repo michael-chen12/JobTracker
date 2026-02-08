@@ -274,9 +274,9 @@ export function KanbanBoard() {
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-      {/* Kanban Columns */}
+      {/* Kanban Columns — scroll-snap for mobile horizontal swiping */}
       <ScrollArea className="w-full">
-        <div className="flex w-max gap-4 pb-4">
+        <div className="flex w-max gap-4 pb-4 snap-x snap-mandatory md:snap-none">
           {COLUMNS.map((column) => (
             <KanbanColumn
               key={column.id}

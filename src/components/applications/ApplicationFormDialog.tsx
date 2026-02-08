@@ -250,7 +250,7 @@ export function ApplicationFormDialog({
       {/* Main application form dialog */}
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="max-w-2xl max-h-[90vh] overflow-y-auto"
+          className="max-w-2xl max-h-[90vh] overflow-y-auto max-sm:h-full max-sm:max-h-full max-sm:rounded-none max-sm:border-0"
           onOpenAutoFocus={(event) => event.preventDefault()}
         >
         <DialogHeader>

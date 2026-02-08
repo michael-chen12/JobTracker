@@ -3,6 +3,7 @@
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { createAdminClient, createClient } from '@/lib/supabase/server';
 import { detectAchievements } from '@/lib/achievements/detector';
+import { triggerNotification } from '@/lib/notifications/trigger';
 import type {
   Achievement,
   AchievementType,
@@ -219,6 +220,17 @@ export async function detectAndCelebrateAchievements(applicationId?: string) {
       revalidatePath('/dashboard');
       revalidatePath('/dashboard/wins');
       revalidateTag(ACHIEVEMENTS_CACHE_TAG, 'max');
+
+      // Trigger notification for each new achievement (fire-and-forget)
+      for (const celebration of result.celebrationData) {
+        triggerNotification({
+          userId: dbUser.id,
+          type: 'achievement',
+          title: celebration.title,
+          message: celebration.message,
+          actionUrl: '/dashboard/wins',
+        }).catch((err) => console.error('Achievement notification error:', err));
+      }
     }
 
     return { data: result };

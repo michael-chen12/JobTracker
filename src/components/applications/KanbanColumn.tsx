@@ -20,9 +20,9 @@ export function KanbanColumn({ id, title, applications, color }: KanbanColumnPro
   const { setNodeRef } = useDroppable({ id });
 
   return (
-    <div className="flex flex-col min-w-[300px] max-w-[300px] bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+    <div className="flex flex-col min-w-[280px] max-w-[280px] md:min-w-[300px] md:max-w-[300px] bg-gray-50 dark:bg-gray-900/50 rounded-lg snap-start">
       {/* Column Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="p-3 md:p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <span

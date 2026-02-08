@@ -45,7 +45,7 @@ export default async function WinsPage() {
     );
   }
 
-  const achievements = 'data' in result ? result.data : [];
+  const achievements = 'data' in result ? (result.data ?? []) : [];
 
   return (
     <div className="container mx-auto px-4 py-8">

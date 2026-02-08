@@ -2,7 +2,9 @@ import { createClient } from '@/lib/supabase/server';
 import SignOutButton from '@/components/auth/SignOutButton';
 import Link from 'next/link';
 import DashboardNav from '@/components/layout/DashboardNav';
-import MobileNav from '@/components/layout/MobileNav';
+import BottomNav from '@/components/layout/BottomNav';
+import { NotificationProvider } from '@/components/notifications/NotificationProvider';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 export default async function DashboardLayout({
   children,
@@ -13,6 +15,18 @@ export default async function DashboardLayout({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Get the app DB user ID for Realtime subscription
+  let dbUserId: string | null = null;
+  if (user) {
+    const { data: dbUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_id', user.id)
+      .single();
+    dbUserId = dbUser?.id ?? null;
+  }
+
   const getInitials = (email?: string | null) => {
     if (!email) return 'U';
     const name = email.split('@')[0] ?? email;
@@ -31,9 +45,6 @@ export default async function DashboardLayout({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              {/* Mobile Menu */}
-              <MobileNav />
-
               <Link href="/dashboard" className="text-xl font-bold text-gray-900 dark:text-white">
                 Job Tracker
               </Link>
@@ -41,29 +52,42 @@ export default async function DashboardLayout({
               {/* Desktop Nav */}
               <DashboardNav />
             </div>
-            <div className="flex items-center gap-2 md:gap-4">
-              {user && (
-                <>
-                  <Link
-                    href="/dashboard/profile"
-                    title={user.email ?? undefined}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-700 ring-1 ring-blue-200 transition hover:bg-blue-200 hover:text-blue-800 dark:bg-blue-900/40 dark:text-blue-200 dark:ring-blue-800"
-                    aria-label="Open profile"
-                  >
-                    <span className="text-xs font-semibold">
-                      {getInitials(user.email)}
-                    </span>
-                  </Link>
-                  <SignOutButton />
-                </>
-              )}
+
+            {/* Right side: bell + avatar */}
+            <div className="flex items-center gap-2 sm:gap-4">
+              {/* Notification bell — visible on all screen sizes */}
+              <NotificationBell />
+
+              {/* Desktop: avatar + sign out. Mobile: accessible via Profile in bottom nav */}
+              <div className="hidden lg:flex items-center gap-4">
+                {user && (
+                  <>
+                    <Link
+                      href="/dashboard/profile"
+                      title={user.email ?? undefined}
+                      className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-700 ring-1 ring-blue-200 transition hover:bg-blue-200 hover:text-blue-800 dark:bg-blue-900/40 dark:text-blue-200 dark:ring-blue-800"
+                      aria-label="Open profile"
+                    >
+                      <span className="text-xs font-semibold">
+                        {getInitials(user.email)}
+                      </span>
+                    </Link>
+                    <SignOutButton />
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="flex-1 min-h-0">{children}</main>
+      {/* Main content — pb-16 on mobile for bottom nav clearance */}
+      <NotificationProvider userId={dbUserId}>
+        <main className="flex-1 min-h-0 pb-16 lg:pb-0">{children}</main>
+      </NotificationProvider>
+
+      {/* Mobile bottom navigation */}
+      <BottomNav />
     </div>
   );
 }
