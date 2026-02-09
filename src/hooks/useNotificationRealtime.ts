@@ -14,7 +14,6 @@ import type { NotificationRow } from '@/types/notifications';
  */
 export function useNotificationRealtime(userId: string | null) {
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const { addNotification, incrementUnreadCount } = useNotificationStore();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -34,6 +33,9 @@ export function useNotificationRealtime(userId: string | null) {
         },
         (payload) => {
           const newNotification = payload.new as NotificationRow;
+
+          // Get store actions inside callback to avoid dependency issues
+          const { addNotification, incrementUnreadCount } = useNotificationStore.getState();
           addNotification(newNotification);
           incrementUnreadCount();
 
@@ -64,5 +66,5 @@ export function useNotificationRealtime(userId: string | null) {
         channelRef.current = null;
       }
     };
-  }, [userId, addNotification, incrementUnreadCount, toast]);
+  }, [userId, toast]);
 }

@@ -1,8 +1,15 @@
-import Link from 'next/link';
-import { ArrowRight, ChevronDown, Sparkles, ClipboardList, Brain, Shield } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { FadeIn } from './FadeIn';
+import Link from "next/link";
+import {
+  ArrowRight,
+  ChevronDown,
+  Sparkles,
+  ClipboardList,
+  Brain,
+  Shield,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { FadeIn } from "./FadeIn";
 
 export function HeroSection() {
   return (
@@ -13,15 +20,17 @@ export function HeroSection() {
 
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 sm:pt-32 sm:pb-24 text-center">
         <FadeIn>
-          <Badge variant="secondary" className="mb-6 px-4 py-1.5 text-sm font-medium">
-            <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+          <Badge
+            variant="secondary"
+            className="mb-6 px-4 py-1.5 text-sm font-medium"
+          >
             AI-Powered Job Search Companion
           </Badge>
         </FadeIn>
 
         <FadeIn delay={100}>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground">
-            Land Your{' '}
+            Land Your{" "}
             <span className="text-blue-600 dark:text-blue-400">Dream Job</span>,
             One Application at a Time
           </h1>
@@ -30,8 +39,8 @@ export function HeroSection() {
         <FadeIn delay={200}>
           <p className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             Organize, track, and optimize your job search with AI-powered
-            insights. Never miss a follow-up or lose track of where you
-            applied again.
+            insights. Never miss a follow-up or lose track of where you applied
+            again.
           </p>
         </FadeIn>
 
@@ -47,7 +56,12 @@ export function HeroSection() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-            <Button variant="outline" size="lg" asChild className="h-12 text-base px-8">
+            <Button
+              variant="outline"
+              size="lg"
+              asChild
+              className="h-12 text-base px-8"
+            >
               <Link href="#features">
                 See How It Works
                 <ChevronDown className="ml-2 h-4 w-4" />

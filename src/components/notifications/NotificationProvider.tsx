@@ -15,7 +15,6 @@ interface NotificationProviderProps {
  * Fetches initial unread count and recent notifications on mount.
  */
 export function NotificationProvider({ userId, children }: NotificationProviderProps) {
-  const { setUnreadCount, setRecentNotifications } = useNotificationStore();
   const [initialized, setInitialized] = useState(false);
 
   // Initialize Realtime subscription
@@ -31,6 +30,9 @@ export function NotificationProvider({ userId, children }: NotificationProviderP
         getNotifications(10, 0, 'all'),
       ]);
 
+      // Get store actions inside effect to avoid dependency issues
+      const { setUnreadCount, setRecentNotifications } = useNotificationStore.getState();
+
       if (countResult.success) {
         setUnreadCount(countResult.data.count);
       }
@@ -43,7 +45,7 @@ export function NotificationProvider({ userId, children }: NotificationProviderP
     }
 
     fetchInitialData();
-  }, [userId, initialized, setUnreadCount, setRecentNotifications]);
+  }, [userId, initialized]);
 
   return <>{children}</>;
 }
