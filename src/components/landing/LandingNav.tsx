@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 
 export function LandingNav() {
   return (
@@ -12,17 +11,18 @@ export function LandingNav() {
         </Link>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            asChild
-            className="hidden sm:inline-flex text-muted-foreground hover:text-foreground"
+          <Link
+            href="/auth/login"
+            className="hidden sm:inline-flex items-center rounded-md h-9 px-4 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
           >
-            <Link href="/auth/login">Sign in</Link>
-          </Button>
-          <Button size="sm" asChild>
-            <Link href="/auth/login">Get started</Link>
-          </Button>
+            Sign in
+          </Link>
+          <Link
+            href="/auth/login"
+            className="inline-flex items-center rounded-md bg-foreground text-background h-9 px-4 text-sm font-medium hover:bg-foreground/90 transition-colors"
+          >
+            Get started
+          </Link>
         </div>
       </div>
     </header>

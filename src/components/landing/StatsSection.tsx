@@ -29,7 +29,7 @@ export function StatsSection() {
     <section className="py-14 border-y border-border/50 overflow-hidden">
       <div className="mb-6 text-center">
         <p className="text-xs font-medium text-muted-foreground/50 tracking-[0.12em] uppercase">
-          Tracking applications for roles like
+          Works for people applying to roles like
         </p>
       </div>
 

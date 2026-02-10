@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { FadeIn } from "./FadeIn";
+import { ScrollToFeaturesLink } from "./ScrollToFeaturesLink";
 
 const mockApplications = [
   {
@@ -38,7 +38,8 @@ const mockApplications = [
   },
 ];
 
-const aiNote = "Claude suggests following up with the Stripe recruiter by Thursday — it's been 5 days since your last touchpoint.";
+const aiNote =
+  "Claude: You applied to Stripe 5 days ago and haven't heard back. Probably a good time to send a short follow-up to the recruiter.";
 
 function AppMockup() {
   return (
@@ -126,30 +127,26 @@ export function HeroSection() {
                 Job Application Tracker
               </p>
               <h1 className="text-5xl sm:text-6xl font-bold tracking-[-0.04em] leading-[1.05] text-foreground text-balance">
-                The job search
+                I built this to
                 <br />
-                grind, tamed.
+                track job apps.
               </h1>
               <p className="mt-5 text-lg text-muted-foreground leading-relaxed">
-                One place for every application, every follow-up, every recruiter
-                conversation. With AI that actually knows your pipeline.
+                I was applying to like 30+ jobs at once and couldn&apos;t keep
+                track of anything. So I built this. It keeps all your
+                applications, follow-ups, and contacts in one spot.
               </p>
 
               <div className="mt-8 flex flex-col sm:flex-row gap-3 items-start">
-                <Button size="lg" asChild>
-                  <Link href="/auth/login">
-                    Start tracking free
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button variant="ghost" size="lg" asChild className="text-muted-foreground">
-                  <Link href="#features">See how it works</Link>
-                </Button>
+                <Link
+                  href="/auth/login"
+                  className="inline-flex items-center gap-2 rounded-lg bg-foreground text-background h-11 px-6 text-sm font-medium hover:bg-foreground/90 transition-colors"
+                >
+                  Start tracking free
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <ScrollToFeaturesLink />
               </div>
-
-              <p className="mt-5 text-xs text-muted-foreground/60">
-                Free forever · No credit card · GDPR compliant
-              </p>
             </div>
           </FadeIn>
 

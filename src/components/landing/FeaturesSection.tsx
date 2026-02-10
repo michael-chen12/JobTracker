@@ -12,9 +12,9 @@ export function FeaturesSection() {
               Features
             </p>
             <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.025em] leading-tight text-foreground">
-              Built around how
+              Here&apos;s what
               <br />
-              real job hunts work
+              it does
             </h2>
           </div>
         </FadeIn>
@@ -25,10 +25,10 @@ export function FeaturesSection() {
             <div className="rounded-2xl border border-border/60 bg-card p-7 h-full shadow-warm-sm hover:shadow-warm transition-shadow duration-300">
               <Brain className="h-5 w-5 text-muted-foreground mb-5" />
               <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-foreground">
-                Claude AI reads your pipeline
+                AI follow-up suggestions (honestly pretty cool)
               </h3>
               <p className="mt-2 text-[15px] text-muted-foreground leading-relaxed max-w-sm">
-                Not generic tips. Claude knows which company you applied to, when, and what happened — and gives you specific, timed follow-up suggestions.
+                I connected Claude AI to it. You give it your applications and it tells you when and how to follow up. Way better than trying to remember yourself.
               </p>
 
               {/* Fake AI response card */}
@@ -37,7 +37,7 @@ export function FeaturesSection() {
                   AI suggestion
                 </p>
                 <p className="text-[13px] text-foreground leading-snug">
-                  &ldquo;Your application to Figma is 8 days old with no response. Based on their typical timeline, this is a good moment to send a brief check-in to your recruiter contact.&rdquo;
+                  &ldquo;You applied to Figma 8 days ago and haven&apos;t heard back. Might be worth sending a short follow-up to the recruiter.&rdquo;
                 </p>
                 <div className="flex gap-2 pt-1">
                   <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
@@ -56,10 +56,10 @@ export function FeaturesSection() {
             <div className="rounded-2xl border border-border/60 bg-card p-7 h-full shadow-warm-sm hover:shadow-warm transition-shadow duration-300">
               <ClipboardList className="h-5 w-5 text-muted-foreground mb-5" />
               <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-foreground">
-                Your pipeline, visible
+                See all your applications
               </h3>
               <p className="mt-2 text-[15px] text-muted-foreground leading-relaxed">
-                Table, kanban, or list. Filter by status, salary, or priority. See everything without opening a spreadsheet.
+                Table, kanban, or list view — pick what you like. Filter by status, salary, location. Basically everything I wished my spreadsheet could do.
               </p>
             </div>
           </FadeIn>
@@ -69,10 +69,10 @@ export function FeaturesSection() {
             <div className="rounded-2xl border border-border/60 bg-card p-7 h-full shadow-warm-sm hover:shadow-warm transition-shadow duration-300">
               <FileText className="h-5 w-5 text-muted-foreground mb-5" />
               <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-foreground">
-                Documents alongside
+                Keep your resume versions straight
               </h3>
               <p className="mt-2 text-[15px] text-muted-foreground leading-relaxed">
-                Resume versions, cover letters, offer letters — attached directly to each application, never lost again.
+                Attach your resume, cover letter, and offer letters to each application. I always used to mix up which resume I sent to who.
               </p>
             </div>
           </FadeIn>
@@ -82,10 +82,10 @@ export function FeaturesSection() {
             <div className="rounded-2xl border border-border/60 bg-card p-7 h-full shadow-warm-sm hover:shadow-warm transition-shadow duration-300">
               <Users className="h-5 w-5 text-muted-foreground mb-5" />
               <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-foreground">
-                Contacts you can trust
+                Remember who you talked to
               </h3>
               <p className="mt-2 text-[15px] text-muted-foreground leading-relaxed">
-                Know exactly who you spoke with, what was said, and when to reach out again.
+                Save recruiter names and notes per application. Useful for not embarrassing yourself in follow-up emails.
               </p>
             </div>
           </FadeIn>
@@ -95,10 +95,10 @@ export function FeaturesSection() {
             <div className="rounded-2xl border border-border/60 bg-card p-7 h-full shadow-warm-sm hover:shadow-warm transition-shadow duration-300">
               <Shield className="h-5 w-5 text-muted-foreground mb-5" />
               <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-foreground">
-                Your data, your rules
+                Your data stays yours
               </h3>
               <p className="mt-2 text-[15px] text-muted-foreground leading-relaxed">
-                Export everything as JSON or CSV. Delete your account anytime. GDPR compliant by design.
+                Export everything as JSON or CSV whenever you want. You can also delete your account. I made it GDPR compliant.
               </p>
             </div>
           </FadeIn>
@@ -108,10 +108,10 @@ export function FeaturesSection() {
             <div className="rounded-2xl border border-border/60 bg-card p-7 h-full shadow-warm-sm hover:shadow-warm transition-shadow duration-300">
               <KeyRound className="h-5 w-5 text-muted-foreground mb-5" />
               <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-foreground">
-                Sign in your way
+                A few ways to sign in
               </h3>
               <p className="mt-2 text-[15px] text-muted-foreground leading-relaxed">
-                Google, GitHub, LinkedIn, or email. Your choice — always secure.
+                Google, GitHub, LinkedIn, or email. Just use whatever you already have an account with.
               </p>
             </div>
           </FadeIn>

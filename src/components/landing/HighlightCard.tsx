@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { FadeIn } from './FadeIn';
 
 export function HighlightCard() {
@@ -14,25 +13,22 @@ export function HighlightCard() {
 
             <div className="relative z-10 text-center max-w-2xl mx-auto">
               <p className="text-2xl sm:text-3xl font-semibold tracking-[-0.025em] leading-snug text-primary-foreground/90">
-                Stop juggling spreadsheets and email threads.{' '}
+                Give it a try.{' '}
                 <span className="text-primary-foreground/55">
-                  Bring your entire job search into one intelligent workspace.
+                  I built this for myself during my own job search and it actually helped a lot. Maybe it&apos;ll help you too.
                 </span>
               </p>
               <p className="mt-4 text-sm text-primary-foreground/40">
-                Built by job seekers, for job seekers
+                Made by one developer who applied to way too many jobs
               </p>
               <div className="mt-8">
-                <Button
-                  asChild
-                  size="lg"
-                  className="bg-primary-foreground text-foreground hover:bg-primary-foreground/90 rounded-xl h-11 px-7"
+                <Link
+                  href="/auth/login"
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary-foreground text-foreground hover:bg-primary-foreground/90 h-11 px-7 text-sm font-medium transition-colors"
                 >
-                  <Link href="/auth/login">
-                    Get started free
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
+                  Get started free
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </div>
             </div>
           </div>
