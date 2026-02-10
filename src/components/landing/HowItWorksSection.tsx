@@ -23,29 +23,33 @@ const steps = [
 
 export function HowItWorksSection() {
   return (
-    <section className="py-16 sm:py-24">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <section className="py-20 sm:py-28">
+      <div className="max-w-5xl mx-auto px-4 sm:px-8">
         <FadeIn>
-          <h2 className="text-3xl sm:text-4xl font-bold">
-            Get Started in Minutes
-          </h2>
-          <p className="text-muted-foreground text-lg mt-4">
-            Three simple steps to a more organized job search.
-          </p>
+          <div className="text-center max-w-lg mx-auto mb-14 sm:mb-20">
+            <p className="text-sm font-medium text-muted-foreground tracking-[0.06em] uppercase mb-3">
+              How it works
+            </p>
+            <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.025em] leading-tight text-foreground">
+              Up and running in minutes
+            </h2>
+          </div>
         </FadeIn>
 
-        <div className="mt-12 sm:mt-16 grid grid-cols-1 sm:grid-cols-3 gap-12 sm:gap-8 relative">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-12 sm:gap-8 relative">
           {/* Connecting line (desktop only) */}
-          <div className="hidden sm:block absolute top-8 left-[20%] right-[20%] h-px bg-border" />
+          <div className="hidden sm:block absolute top-5 left-[22%] right-[22%] h-px bg-border" />
 
           {steps.map((step, index) => (
-            <FadeIn key={step.number} delay={index * 150}>
-              <div className="flex flex-col items-center text-center">
-                <div className="relative z-10 w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-bold mb-6">
+            <FadeIn key={step.number} delay={index * 120}>
+              <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
+                <div className="relative z-10 w-10 h-10 rounded-full border-2 border-border flex items-center justify-center text-sm font-semibold text-muted-foreground mb-5">
                   {step.number}
                 </div>
-                <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
-                <p className="text-muted-foreground text-sm max-w-xs">
+                <h3 className="text-base font-semibold tracking-[-0.01em] mb-2">
+                  {step.title}
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
                   {step.description}
                 </p>
               </div>

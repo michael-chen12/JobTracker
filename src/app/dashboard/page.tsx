@@ -1,14 +1,17 @@
+import type { Metadata } from "next";
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+  description: "Track all your job applications in one place.",
+};
 import { getApplications } from '@/actions/applications';
-import { getAchievements } from '@/actions/achievements';
 import { DashboardClient } from '@/components/dashboard/DashboardClient';
-import type { AchievementWithMetadata } from '@/types/achievements';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  // Get authenticated user
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -17,19 +20,7 @@ export default async function DashboardPage() {
     redirect('/auth/login');
   }
 
-  // Fetch independent dashboard data in parallel to avoid server waterfalls.
-  const [applicationsResult, achievementsResult] = await Promise.all([
-    getApplications({ page: 1, limit: 20 }),
-    getAchievements(10),
-  ]);
-
-  const initialJourneyAchievements: AchievementWithMetadata[] =
-    'data' in achievementsResult && achievementsResult.data
-      ? achievementsResult.data
-      : [];
-
-  const initialJourneyError =
-    'error' in achievementsResult ? achievementsResult.error ?? null : null;
+  const applicationsResult = await getApplications({ page: 1, limit: 20 });
 
   return (
     <DashboardClient
@@ -43,8 +34,6 @@ export default async function DashboardPage() {
           : { page: 1, limit: 20, total: 0, totalPages: 0 }
       }
       error={'error' in applicationsResult ? (applicationsResult.error ?? null) : null}
-      initialJourneyAchievements={initialJourneyAchievements}
-      initialJourneyError={initialJourneyError}
     />
   );
 }

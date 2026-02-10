@@ -1,11 +1,9 @@
-import { LandingNav } from '@/components/landing/LandingNav';
-import { HeroSection } from '@/components/landing/HeroSection';
-import { FeaturesSection } from '@/components/landing/FeaturesSection';
-import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
-import { StatsSection } from '@/components/landing/StatsSection';
-import { HighlightCard } from '@/components/landing/HighlightCard';
-import { CTASection } from '@/components/landing/CTASection';
-import { LandingFooter } from '@/components/landing/LandingFooter';
+import { LandingNav } from "@/components/landing/LandingNav";
+import { HeroSection } from "@/components/landing/HeroSection";
+import { StatsSection } from "@/components/landing/StatsSection";
+import { FeaturesSection } from "@/components/landing/FeaturesSection";
+import { HighlightCard } from "@/components/landing/HighlightCard";
+import { LandingFooter } from "@/components/landing/LandingFooter";
 
 export default function Home() {
   return (
@@ -13,11 +11,9 @@ export default function Home() {
       <LandingNav />
       <main>
         <HeroSection />
-        <FeaturesSection />
-        <HowItWorksSection />
         <StatsSection />
+        <FeaturesSection />
         <HighlightCard />
-        <CTASection />
       </main>
       <LandingFooter />
     </div>

@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+
+export const metadata: Metadata = {
+  title: "Analytics",
+  description: "Visualize your job search performance and application trends.",
+};
 import { getAnalytics } from '@/actions/analytics';
 import { getInsights } from '@/actions/insights';
 import { AnalyticsDashboard } from '@/components/analytics/AnalyticsDashboard';

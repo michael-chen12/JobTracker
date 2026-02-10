@@ -10,6 +10,7 @@ export default defineConfig({
       'src/**/*.test.ts',
       'src/**/*.test.tsx',
       'tests/unit/**/*.test.ts',
+      'tests/unit/**/*.test.tsx',
     ],
     exclude: [
       'node_modules/**',

@@ -1,27 +1,41 @@
-import { Quote } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { FadeIn } from './FadeIn';
 
 export function HighlightCard() {
   return (
     <section className="py-16 sm:py-24">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-8">
         <FadeIn>
-          <Card className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white border-0 overflow-hidden relative">
-            {/* Decorative circle */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+          <div className="rounded-2xl bg-foreground px-8 sm:px-14 py-12 sm:py-16 relative overflow-hidden">
+            {/* Subtle warm texture — no colored glow */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_hsl(30_8%_20%),_transparent_60%)] pointer-events-none" />
 
-            <CardContent className="p-8 sm:p-12 relative z-10 text-center">
-              <Quote className="h-10 w-10 mx-auto mb-6 text-white/60" />
-              <p className="text-xl sm:text-2xl font-medium leading-relaxed text-white/90">
-                Stop juggling spreadsheets and email threads. Bring your entire
-                job search into one intelligent workspace.
+            <div className="relative z-10 text-center max-w-2xl mx-auto">
+              <p className="text-2xl sm:text-3xl font-semibold tracking-[-0.025em] leading-snug text-primary-foreground/90">
+                Stop juggling spreadsheets and email threads.{' '}
+                <span className="text-primary-foreground/55">
+                  Bring your entire job search into one intelligent workspace.
+                </span>
               </p>
-              <p className="mt-6 text-sm text-white/60">
+              <p className="mt-4 text-sm text-primary-foreground/40">
                 Built by job seekers, for job seekers
               </p>
-            </CardContent>
-          </Card>
+              <div className="mt-8">
+                <Button
+                  asChild
+                  size="lg"
+                  className="bg-primary-foreground text-foreground hover:bg-primary-foreground/90 rounded-xl h-11 px-7"
+                >
+                  <Link href="/auth/login">
+                    Get started free
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
         </FadeIn>
       </div>
     </section>

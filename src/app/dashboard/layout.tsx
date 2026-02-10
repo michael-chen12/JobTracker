@@ -39,13 +39,13 @@ export default async function DashboardLayout({
   };
 
   return (
-    <div className="min-h-full bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="min-h-full bg-background flex flex-col">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow">
+      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-14 sm:h-16">
             <div className="flex items-center">
-              <Link href="/dashboard" className="text-xl font-bold text-gray-900 dark:text-white">
+              <Link href="/dashboard" className="text-base font-semibold tracking-[-0.02em] text-foreground">
                 Job Tracker
               </Link>
 
@@ -54,21 +54,21 @@ export default async function DashboardLayout({
             </div>
 
             {/* Right side: bell + avatar */}
-            <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3">
               {/* Notification bell — visible on all screen sizes */}
               <NotificationBell />
 
               {/* Desktop: avatar + sign out. Mobile: accessible via Profile in bottom nav */}
-              <div className="hidden lg:flex items-center gap-4">
+              <div className="hidden lg:flex items-center gap-3">
                 {user && (
                   <>
                     <Link
                       href="/dashboard/profile"
                       title={user.email ?? undefined}
-                      className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-700 ring-1 ring-blue-200 transition hover:bg-blue-200 hover:text-blue-800 dark:bg-blue-900/40 dark:text-blue-200 dark:ring-blue-800"
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground ring-1 ring-border transition hover:bg-accent hover:text-foreground"
                       aria-label="Open profile"
                     >
-                      <span className="text-xs font-semibold">
+                      <span className="text-xs font-semibold tracking-wide">
                         {getInitials(user.email)}
                       </span>
                     </Link>

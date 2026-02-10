@@ -14,7 +14,10 @@ export default async function NotFound() {
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="text-lg font-bold text-gray-900 dark:text-white">
+          <Link
+            href="/"
+            className="text-lg font-bold text-gray-900 dark:text-white"
+          >
             Job Tracker
           </Link>
           <nav className="flex items-center gap-5 text-sm">
@@ -27,20 +30,11 @@ export default async function NotFound() {
             {isAuthenticated ? (
               <>
                 <Link
-                  href="/dashboard"
-                  className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                >
-                  Dashboard
-                </Link>
-                <Link
                   href="/dashboard/profile"
-                  className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                  className="hidden md:inline text-gray-500 dark:text-gray-400"
                 >
-                  Profile
-                </Link>
-                <span className="hidden md:inline text-gray-500 dark:text-gray-400">
                   {user?.email}
-                </span>
+                </Link>
                 <SignOutButton />
               </>
             ) : (
@@ -66,8 +60,8 @@ export default async function NotFound() {
                 We couldn&apos;t find that page.
               </h1>
               <p className="text-lg text-gray-600 dark:text-gray-400 mt-4 max-w-xl">
-                The link may be outdated, or the page might have moved. Try one of
-                the destinations below or return to a safe place.
+                The link may be outdated, or the page might have moved. Try one
+                of the destinations below or return to a safe place.
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
                 <Link

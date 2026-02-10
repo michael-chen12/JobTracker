@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+
+export const metadata: Metadata = {
+  title: "Profile & Settings",
+  description: "Manage your profile, resume, and account preferences.",
+};
 import { ResumeUpload } from '@/components/profile/ResumeUpload';
 import { ParsedResumeDisplay } from '@/components/profile/ParsedResumeDisplay';
 import { DataPrivacySection } from '@/components/profile/DataPrivacySection';

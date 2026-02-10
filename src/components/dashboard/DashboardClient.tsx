@@ -8,7 +8,6 @@ import { ApplicationsTable } from "@/components/applications/ApplicationsTable";
 import { MobileApplicationList } from "@/components/applications/MobileApplicationList";
 import { Plus, LayoutGrid, Table as TableIcon } from "lucide-react";
 import type { ApplicationRow } from "@/components/applications/columns";
-import type { AchievementWithMetadata } from "@/types/achievements";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   filtersToSearchParams,
@@ -49,23 +48,11 @@ const KanbanBoard = dynamic(
   },
 );
 
-const YourJourneySection = dynamic(
-  () =>
-    import("@/components/journey/YourJourneySection").then((mod) => ({
-      default: mod.YourJourneySection,
-    })),
-  {
-    loading: () => <Skeleton className="h-48 w-full" />,
-  },
-);
-
 interface DashboardClientProps {
   userName: string;
   initialApplications: ApplicationRow[];
   initialPagination: DashboardPagination;
   error: string | null;
-  initialJourneyAchievements: AchievementWithMetadata[];
-  initialJourneyError: string | null;
 }
 
 export function DashboardClient({
@@ -73,8 +60,6 @@ export function DashboardClient({
   initialApplications,
   initialPagination,
   error,
-  initialJourneyAchievements,
-  initialJourneyError,
 }: DashboardClientProps) {
   return (
     <DashboardStoreProvider
@@ -85,26 +70,16 @@ export function DashboardClient({
         error,
       }}
     >
-      <DashboardClientContent
-        userName={userName}
-        initialJourneyAchievements={initialJourneyAchievements}
-        initialJourneyError={initialJourneyError}
-      />
+      <DashboardClientContent userName={userName} />
     </DashboardStoreProvider>
   );
 }
 
 interface DashboardClientContentProps {
   userName: string;
-  initialJourneyAchievements: AchievementWithMetadata[];
-  initialJourneyError: string | null;
 }
 
-function DashboardClientContent({
-  userName,
-  initialJourneyAchievements,
-  initialJourneyError,
-}: DashboardClientContentProps) {
+function DashboardClientContent({ userName }: DashboardClientContentProps) {
   const dialogOpen = useApplicationDialogStore((s) => s.open);
   const setDialogOpen = useApplicationDialogStore((s) => s.setOpen);
   const isMobile = useIsMobile();
@@ -280,14 +255,6 @@ function DashboardClientContent({
               {stats.offers}
             </p>
           </div>
-        </div>
-
-        {/* Your Journey Section */}
-        <div className="mb-8">
-          <YourJourneySection
-            initialAchievements={initialJourneyAchievements}
-            error={initialJourneyError}
-          />
         </div>
 
         {/* Applications View */}

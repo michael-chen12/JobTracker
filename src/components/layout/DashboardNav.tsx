@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/dashboard/analytics', label: 'Analytics' },
-  { href: '/dashboard/wins', label: 'Wins' },
   { href: '/dashboard/contacts', label: 'Contacts' },
 ];
 
@@ -105,7 +104,7 @@ export default function DashboardNav() {
         aria-valuemax={100}
         aria-valuenow={progress}
         className={cn(
-          'fixed left-0 top-0 z-50 h-0.5 bg-gradient-to-r from-blue-500 via-sky-400 to-blue-500 transition-[width,opacity] ease-out pointer-events-none',
+          'fixed left-0 top-0 z-50 h-[2px] bg-foreground transition-[width,opacity] ease-out pointer-events-none',
           progress === 100 ? 'duration-150' : 'duration-500',
           progress === 0 ? 'opacity-0' : 'opacity-100'
         )}
@@ -119,13 +118,16 @@ export default function DashboardNav() {
               key={item.href}
               href={item.href}
               aria-current={active ? 'page' : undefined}
+              onMouseEnter={() => router.prefetch(item.href)}
               className={cn(
-                'text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors',
-                active &&
-                  'text-gray-900 dark:text-white underline underline-offset-8 decoration-2 decoration-gray-900/70 dark:decoration-white/70'
+                'relative text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-150',
+                active && 'text-foreground'
               )}
             >
               {item.label}
+              {active && (
+                <span className="absolute -bottom-[21px] left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-foreground" />
+              )}
             </Link>
           );
         })}

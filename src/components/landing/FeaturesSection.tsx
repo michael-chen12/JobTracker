@@ -1,93 +1,120 @@
-import {
-  ClipboardList,
-  Brain,
-  FileText,
-  Users,
-  Shield,
-  KeyRound,
-} from 'lucide-react';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardDescription,
-} from '@/components/ui/card';
+import { Brain, ClipboardList, FileText, Users, Shield, KeyRound } from 'lucide-react';
 import { FadeIn } from './FadeIn';
 
-const features = [
-  {
-    icon: ClipboardList,
-    title: 'Track Applications',
-    description:
-      'Organize every application with status tracking, deadlines, priority levels, and salary ranges. See your entire pipeline at a glance.',
-  },
-  {
-    icon: Brain,
-    title: 'AI-Powered Insights',
-    description:
-      'Let Claude AI parse your resumes, score job matches, summarize notes, and suggest personalized follow-up actions.',
-  },
-  {
-    icon: FileText,
-    title: 'Manage Documents',
-    description:
-      'Store resumes, cover letters, and correspondence alongside each application. Everything you need, right where you need it.',
-  },
-  {
-    icon: Users,
-    title: 'Contact Network',
-    description:
-      'Keep track of recruiters, hiring managers, and referrals. Never forget who you spoke with or what was discussed.',
-  },
-  {
-    icon: Shield,
-    title: 'Data Privacy',
-    description:
-      'GDPR-compliant data export and account deletion. Your job search data stays private and under your control.',
-  },
-  {
-    icon: KeyRound,
-    title: 'Easy Authentication',
-    description:
-      'Sign in securely with Google, GitHub, LinkedIn, or classic email and password. Get started in seconds.',
-  },
-];
-
+// Bento grid: asymmetric layout instead of 6 equal cards
 export function FeaturesSection() {
   return (
-    <section id="features" className="py-16 sm:py-24 bg-muted/50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="features" className="py-20 sm:py-28 bg-muted/30">
+      <div className="max-w-6xl mx-auto px-4 sm:px-8">
         <FadeIn>
-          <div className="text-center">
-            <h2 className="text-3xl sm:text-4xl font-bold">
-              Everything You Need to Manage Your Job Search
-            </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto mt-4">
-              From your first application to your final offer, we&apos;ve got you
-              covered with tools that actually help.
+          <div className="max-w-xl mb-12 sm:mb-16">
+            <p className="text-sm font-medium text-muted-foreground tracking-[0.06em] uppercase mb-3">
+              Features
             </p>
+            <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.025em] leading-tight text-foreground">
+              Built around how
+              <br />
+              real job hunts work
+            </h2>
           </div>
         </FadeIn>
 
-        <div className="mt-12 sm:mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-          {features.map((feature, index) => (
-            <FadeIn key={feature.title} delay={index * 100}>
-              <Card className="border-0 shadow-none bg-background transition-shadow hover:shadow-md h-full">
-                <CardHeader>
-                  <div className="w-12 h-12 rounded-lg bg-blue-50 dark:bg-blue-950 flex items-center justify-center mb-4">
-                    <feature.icon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <CardTitle className="text-xl">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-base leading-relaxed">
-                    {feature.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            </FadeIn>
-          ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Large AI card — spans 2 columns */}
+          <FadeIn delay={0} className="sm:col-span-2">
+            <div className="rounded-2xl border border-border/60 bg-card p-7 h-full shadow-warm-sm hover:shadow-warm transition-shadow duration-300">
+              <Brain className="h-5 w-5 text-muted-foreground mb-5" />
+              <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-foreground">
+                Claude AI reads your pipeline
+              </h3>
+              <p className="mt-2 text-[15px] text-muted-foreground leading-relaxed max-w-sm">
+                Not generic tips. Claude knows which company you applied to, when, and what happened — and gives you specific, timed follow-up suggestions.
+              </p>
+
+              {/* Fake AI response card */}
+              <div className="mt-6 rounded-xl border border-border/70 bg-background p-4 space-y-2">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                  AI suggestion
+                </p>
+                <p className="text-[13px] text-foreground leading-snug">
+                  &ldquo;Your application to Figma is 8 days old with no response. Based on their typical timeline, this is a good moment to send a brief check-in to your recruiter contact.&rdquo;
+                </p>
+                <div className="flex gap-2 pt-1">
+                  <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
+                    Draft email
+                  </span>
+                  <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
+                    Snooze 2 days
+                  </span>
+                </div>
+              </div>
+            </div>
+          </FadeIn>
+
+          {/* Small card: Tracking */}
+          <FadeIn delay={80}>
+            <div className="rounded-2xl border border-border/60 bg-card p-7 h-full shadow-warm-sm hover:shadow-warm transition-shadow duration-300">
+              <ClipboardList className="h-5 w-5 text-muted-foreground mb-5" />
+              <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-foreground">
+                Your pipeline, visible
+              </h3>
+              <p className="mt-2 text-[15px] text-muted-foreground leading-relaxed">
+                Table, kanban, or list. Filter by status, salary, or priority. See everything without opening a spreadsheet.
+              </p>
+            </div>
+          </FadeIn>
+
+          {/* Small card: Documents */}
+          <FadeIn delay={120}>
+            <div className="rounded-2xl border border-border/60 bg-card p-7 h-full shadow-warm-sm hover:shadow-warm transition-shadow duration-300">
+              <FileText className="h-5 w-5 text-muted-foreground mb-5" />
+              <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-foreground">
+                Documents alongside
+              </h3>
+              <p className="mt-2 text-[15px] text-muted-foreground leading-relaxed">
+                Resume versions, cover letters, offer letters — attached directly to each application, never lost again.
+              </p>
+            </div>
+          </FadeIn>
+
+          {/* Small card: Contacts */}
+          <FadeIn delay={160}>
+            <div className="rounded-2xl border border-border/60 bg-card p-7 h-full shadow-warm-sm hover:shadow-warm transition-shadow duration-300">
+              <Users className="h-5 w-5 text-muted-foreground mb-5" />
+              <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-foreground">
+                Contacts you can trust
+              </h3>
+              <p className="mt-2 text-[15px] text-muted-foreground leading-relaxed">
+                Know exactly who you spoke with, what was said, and when to reach out again.
+              </p>
+            </div>
+          </FadeIn>
+
+          {/* Wide card: Privacy spans 1 or 2 col depending on grid */}
+          <FadeIn delay={200}>
+            <div className="rounded-2xl border border-border/60 bg-card p-7 h-full shadow-warm-sm hover:shadow-warm transition-shadow duration-300">
+              <Shield className="h-5 w-5 text-muted-foreground mb-5" />
+              <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-foreground">
+                Your data, your rules
+              </h3>
+              <p className="mt-2 text-[15px] text-muted-foreground leading-relaxed">
+                Export everything as JSON or CSV. Delete your account anytime. GDPR compliant by design.
+              </p>
+            </div>
+          </FadeIn>
+
+          {/* Auth card */}
+          <FadeIn delay={240}>
+            <div className="rounded-2xl border border-border/60 bg-card p-7 h-full shadow-warm-sm hover:shadow-warm transition-shadow duration-300">
+              <KeyRound className="h-5 w-5 text-muted-foreground mb-5" />
+              <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-foreground">
+                Sign in your way
+              </h3>
+              <p className="mt-2 text-[15px] text-muted-foreground leading-relaxed">
+                Google, GitHub, LinkedIn, or email. Your choice — always secure.
+              </p>
+            </div>
+          </FadeIn>
         </div>
       </div>
     </section>
