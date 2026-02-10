@@ -13,47 +13,86 @@ import { createClient } from '@/lib/supabase/server';
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
-  const token_hash = searchParams.get('token_hash');
+  const tokenHash = searchParams.get('token_hash');
   const type = searchParams.get('type') as EmailOtpType | null;
+  const code = searchParams.get('code');
+  const nextParam = searchParams.get('next');
+  const nextPath = nextParam?.startsWith('/') ? nextParam : null;
 
-  if (token_hash && type) {
-    const supabase = await createClient();
+  const supabase = await createClient();
 
-    const { error } = await supabase.auth.verifyOtp({ type, token_hash });
+  let authError: Error | null = null;
 
-    if (!error) {
-      if (type === 'signup' || type === 'email') {
-        // Email confirmed — upsert user record and go to onboarding
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+  // Support both link styles:
+  // 1) token_hash + type (OTP verification)
+  // 2) code (PKCE auth-code exchange)
+  if (tokenHash && type) {
+    const { error } = await supabase.auth.verifyOtp({
+      type,
+      token_hash: tokenHash,
+    });
+    authError = error;
+  } else if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    authError = error;
+  } else {
+    return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+  }
 
-        if (user) {
-          await supabase.from('users').upsert(
-            {
-              auth_id: user.id,
-              email: user.email!,
-              display_name:
-                user.user_metadata.display_name ||
-                user.email!.split('@')[0],
-              photo_url: null,
-              role: 'user',
-            },
-            { onConflict: 'auth_id' }
-          );
-        }
+  if (authError) {
+    return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+  }
 
-        return NextResponse.redirect(`${origin}/auth/onboarding`);
-      }
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-      if (type === 'recovery') {
-        return NextResponse.redirect(`${origin}/auth/reset-password`);
-      }
+  if (!user || !user.email) {
+    return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+  }
 
-      // Fallback for other OTP types
-      return NextResponse.redirect(`${origin}/dashboard`);
+  const { error: upsertError } = await supabase.from('users').upsert(
+    {
+      auth_id: user.id,
+      email: user.email,
+      display_name:
+        user.user_metadata.display_name ||
+        user.user_metadata.full_name ||
+        user.user_metadata.name ||
+        user.email.split('@')[0],
+      photo_url:
+        user.user_metadata.avatar_url ||
+        user.user_metadata.picture ||
+        null,
+      role: 'user',
+    },
+    { onConflict: 'auth_id' }
+  );
+
+  if (upsertError) {
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_id', user.id)
+      .maybeSingle();
+
+    if (!existingUser) {
+      return NextResponse.redirect(`${origin}/auth/auth-code-error`);
     }
   }
 
-  return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+  if (type === 'recovery') {
+    return NextResponse.redirect(`${origin}/auth/reset-password`);
+  }
+
+  if (nextPath) {
+    return NextResponse.redirect(`${origin}${nextPath}`);
+  }
+
+  if (type === 'signup' || type === 'email' || code) {
+    return NextResponse.redirect(`${origin}/auth/onboarding`);
+  }
+
+  // Fallback for other OTP types
+  return NextResponse.redirect(`${origin}/dashboard`);
 }

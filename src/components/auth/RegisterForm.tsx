@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, CheckCircle2 } from 'lucide-react';
@@ -16,9 +17,11 @@ import {
 } from '@/components/ui/form';
 import { registerSchema, type RegisterInput } from '@/schemas/auth';
 import { signUpWithEmail } from '@/lib/supabase/auth';
+import { toFriendlyAuthError } from '@/lib/supabase/auth-errors';
 import PasswordStrengthMeter from './PasswordStrengthMeter';
 
 export default function RegisterForm() {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -43,8 +46,11 @@ export default function RegisterForm() {
         data.displayName
       );
 
-      // If user exists but no session, email confirmation is needed
-      if (result.user && !result.session) {
+      if (result.session) {
+        // Email confirmation disabled — user is logged in immediately
+        router.push('/dashboard');
+      } else if (result.user) {
+        // Email confirmation required — show success message
         setIsSuccess(true);
       }
     } catch (err: unknown) {
@@ -56,7 +62,7 @@ export default function RegisterForm() {
           'An account with this email already exists. Try signing in instead.'
         );
       } else {
-        setError(message);
+        setError(toFriendlyAuthError(message, 'sign_up'));
       }
     }
   };

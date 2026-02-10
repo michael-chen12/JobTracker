@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/form';
 import { forgotPasswordSchema, type ForgotPasswordInput } from '@/schemas/auth';
 import { resetPasswordForEmail } from '@/lib/supabase/auth';
+import { toFriendlyAuthError } from '@/lib/supabase/auth-errors';
 
 export default function ForgotPasswordPage() {
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +37,7 @@ export default function ForgotPasswordPage() {
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : 'Failed to send reset email';
-      setError(message);
+      setError(toFriendlyAuthError(message, 'password_reset'));
     }
   };
 

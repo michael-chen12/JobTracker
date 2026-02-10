@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/form';
 import { loginSchema, type LoginInput } from '@/schemas/auth';
 import { signInWithEmail } from '@/lib/supabase/auth';
+import { toFriendlyAuthError } from '@/lib/supabase/auth-errors';
 
 export default function LoginForm() {
   const router = useRouter();
@@ -36,7 +37,6 @@ export default function LoginForm() {
       setError(null);
       await signInWithEmail(data.email, data.password);
       router.push('/dashboard');
-      router.refresh();
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : 'Failed to sign in';
@@ -48,7 +48,7 @@ export default function LoginForm() {
       } else if (message.includes('Invalid login credentials')) {
         setError('Invalid email or password. Please try again.');
       } else {
-        setError(message);
+        setError(toFriendlyAuthError(message, 'sign_in'));
       }
     }
   };

@@ -5,6 +5,13 @@ import { createClient } from './client';
  * These functions should only be called from Client Components
  */
 
+// Reliable origin detection — avoids broken redirect URLs when
+// NEXT_PUBLIC_APP_URL is missing or misconfigured in .env.local
+const getOrigin = () =>
+  typeof window !== 'undefined'
+    ? window.location.origin
+    : (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000');
+
 // --- OAuth Providers ---
 
 export async function signInWithGoogle() {
@@ -13,7 +20,7 @@ export async function signInWithGoogle() {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+      redirectTo: `${getOrigin()}/auth/callback`,
     },
   });
 
@@ -27,7 +34,7 @@ export async function signInWithGitHub() {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'github',
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+      redirectTo: `${getOrigin()}/auth/callback`,
     },
   });
 
@@ -41,7 +48,7 @@ export async function signInWithLinkedIn() {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'linkedin_oidc',
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+      redirectTo: `${getOrigin()}/auth/callback`,
     },
   });
 
@@ -63,7 +70,7 @@ export async function signUpWithEmail(
     password,
     options: {
       data: { display_name: displayName || email.split('@')[0] },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/confirm`,
+      emailRedirectTo: `${getOrigin()}/auth/confirm`,
     },
   });
 
@@ -89,7 +96,7 @@ export async function resetPasswordForEmail(email: string) {
   const supabase = createClient();
 
   const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password`,
+    redirectTo: `${getOrigin()}/auth/reset-password`,
   });
 
   if (error) throw error;

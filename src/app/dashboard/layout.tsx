@@ -16,15 +16,48 @@ export default async function DashboardLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Get the app DB user ID for Realtime subscription
+  // Get the app DB user ID for Realtime subscription.
+  // SELECT first (fast path — record already exists after callback/confirm).
+  // Only fall back to upsert if the row is genuinely missing (e.g. the
+  // callback route failed to create it).
   let dbUserId: string | null = null;
   if (user) {
     const { data: dbUser } = await supabase
       .from('users')
       .select('id')
       .eq('auth_id', user.id)
-      .single();
+      .maybeSingle();
+
     dbUserId = dbUser?.id ?? null;
+
+    if (!dbUserId) {
+      const email = user.email ?? user.user_metadata?.email;
+      if (email) {
+        const { data: createdUser } = await supabase
+          .from('users')
+          .upsert(
+            {
+              auth_id: user.id,
+              email,
+              display_name:
+                user.user_metadata?.display_name ||
+                user.user_metadata?.full_name ||
+                user.user_metadata?.name ||
+                email.split('@')[0],
+              photo_url:
+                user.user_metadata?.avatar_url ||
+                user.user_metadata?.picture ||
+                null,
+              role: 'user',
+            },
+            { onConflict: 'auth_id' }
+          )
+          .select('id')
+          .maybeSingle();
+
+        dbUserId = createdUser?.id ?? null;
+      }
+    }
   }
 
   const getInitials = (email?: string | null) => {

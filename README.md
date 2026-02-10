@@ -1,208 +1,143 @@
 # Job Application Tracker
 
-An employer-grade job application tracking system with AI-powered features for resume parsing, notes summarization, and job description analysis.
+I built this after losing track of which companies I'd applied to, who I'd emailed, and what version of my resume I'd sent where. Spreadsheets worked for a while, then they didn't.
 
-## Features
+This is a full job application tracker with Kanban + table views, AI-assisted resume parsing and job matching, a notification system, analytics, and a bunch of other stuff I kept adding as the job search dragged on.
 
-- Track job applications with detailed status management
-- Kanban board and table views for application organization
-- AI-powered resume parsing and job analysis
-- Notes management with AI summarization
-- Document attachments and organization
-- Dashboard analytics and insights
+---
 
-## Tech Stack
+## What it does
 
-- **Framework:** Next.js 16 (App Router)
-- **Language:** TypeScript 5.3
-- **Database:** Supabase (PostgreSQL)
-- **Authentication:** Supabase Auth (Google OAuth)
-- **AI:** Anthropic Claude API
-- **Styling:** Tailwind CSS + shadcn/ui
-- **Testing:** Vitest (unit) + Playwright (E2E)
+- **Track applications** — statuses, notes, contacts, documents, correspondence history. Everything in one place.
+- **Kanban board** — drag-and-drop across Applied → Interview → Offer → Rejected. Also has a table view if you prefer that.
+- **AI features** — paste a job description and it'll parse the requirements, compare them against your resume, and highlight skill gaps. Also generates follow-up email drafts and summarizes your notes.
+- **Skills gap analysis** — shows you which skills are missing across your active applications. Pulls YouTube tutorials for each gap automatically.
+- **Analytics** — application funnel, response rates by status, weekly digest. Useful once you have 20+ applications.
+- **Notifications** — browser push + email. Reminders to follow up, alerts when something changes.
+- **Contact tracking** — recruiters, hiring managers, referrals. Attach them to applications.
+- **Document management** — upload resumes and cover letters per application so you always know what you sent.
+- **Achievements / Wins** — keeps track of milestones so the process feels less like a grind.
 
-## Prerequisites
+---
 
-- Node.js 20+ and npm
-- Supabase account
-- Google OAuth credentials (for authentication)
-- Anthropic API key (for AI features)
+## Stack
 
-## Installation
+- **Next.js 16** (App Router)
+- **TypeScript**
+- **Supabase** — Postgres + Auth + Storage + Realtime
+- **Anthropic Claude API** — AI features
+- **Tailwind CSS + shadcn/ui**
+- **Vitest** (unit) + **Playwright** (E2E)
 
-1. Clone the repository:
+---
+
+## Getting started
+
+### 1. Clone and install
 
 ```bash
-git clone <repository-url>
+git clone <repo-url>
 cd JobApplicationApp
-```
-
-2. Install dependencies:
-
-```bash
 npm install
 ```
 
-3. Set up environment variables (see sections below)
+### 2. Set up environment variables
 
-4. Run database migrations:
+Create a `.env.local` at the root. You'll need:
+
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# Anthropic (AI features)
+ANTHROPIC_API_KEY=
+
+# Optional: enables YouTube course recommendations
+YOUTUBE_API_KEY=
+
+# Optional: email notifications via Resend
+RESEND_API_KEY=
+
+# Web push (generate with web-push package)
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+```
+
+### 3. Run migrations
 
 ```bash
+npx supabase db push
+```
+
+Or if you're working against a local Supabase instance:
+
+```bash
+npx supabase start
 npx supabase migration up
 ```
 
-5. Start the development server:
+### 4. Start the dev server
 
 ```bash
 npm run dev
 ```
 
-## Authentication Setup
+---
 
-This app uses Supabase Auth with Google OAuth for user authentication.
+## Auth setup
 
-### Configure Supabase
+Supports email/password, Google, GitHub, and LinkedIn OAuth. All configured through Supabase.
 
-1. Create a Supabase project at [supabase.com](https://supabase.com)
-2. Copy your project URL and anon key from Settings > API
-3. Enable Google OAuth provider in Authentication > Providers
+For Google OAuth: create credentials in [Google Cloud Console](https://console.cloud.google.com), add the Supabase callback URL (`https://<your-project>.supabase.co/auth/v1/callback`), then drop the client ID and secret into Supabase Dashboard → Authentication → Providers.
 
-### Configure Google OAuth
+Same flow for GitHub and LinkedIn — create an OAuth app, grab the credentials, add them to Supabase.
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com)
-2. Create a new project or select existing one
-3. Enable Google+ API
-4. Create OAuth 2.0 credentials
-5. Add authorized redirect URI: `https://<your-project>.supabase.co/auth/v1/callback`
-6. Copy Client ID and Client Secret
+---
 
-### Add to Supabase
+## AI setup
 
-1. In Supabase Dashboard, go to Authentication > Providers
-2. Enable Google provider
-3. Enter your Google Client ID and Client Secret
-4. Save changes
+Get an API key from [Anthropic](https://console.anthropic.com) and add it to `.env.local`. The AI features are rate-limited per user (10 resume parses/hour, 10 job analyses/hour, 50 note summaries/hour) to keep costs reasonable.
 
-### Configure Environment
+Rough cost per active user: ~$0.22/month with prompt caching enabled.
 
-Add to `.env.local`:
+---
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=your-project-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+## Project structure
+
+```
+src/
+  app/          Next.js pages (App Router)
+  actions/      Server actions — one file per domain
+  components/   UI components
+  lib/          Supabase client, AI clients, utilities
+  schemas/      Zod schemas
+  types/        TypeScript types
+
+tests/
+  unit/         Vitest unit tests
+  e2e/          Playwright E2E tests
+
+supabase/
+  migrations/   SQL migrations (run in order)
 ```
 
-## AI Features Setup
+---
 
-This app uses Anthropic's Claude API for AI-powered features including resume parsing, notes summarization, and job description analysis.
+## Scripts
 
-### Get API Key
-
-1. Go to [Anthropic Console](https://console.anthropic.com)
-2. Sign up or log in
-3. Create a new API key
-4. Copy the key (starts with `sk-ant-`)
-
-### Configure Environment
-
-Add to `.env.local`:
-
-```env
-ANTHROPIC_API_KEY=sk-ant-your-actual-key-here
-```
-
-### Rate Limits
-
-To prevent abuse and control costs:
-- Resume parsing: 10 per hour per user
-- Notes summarization: 50 per hour per user
-- Job analysis: 10 per hour per user
-
-### Cost Estimates
-
-Based on Claude 3.5 Sonnet pricing:
-- Resume parse: ~$0.015 each
-- Notes summary: ~$0.005 each
-- Job analysis: ~$0.020 each
-
-**Expected cost per active user: ~$0.22/month** (with prompt caching)
-
-### Monitoring Usage
-
-Query your AI usage:
-
-```sql
-SELECT
-  operation_type,
-  COUNT(*) as total_calls,
-  SUM(cost_estimate) as total_cost_usd
-FROM ai_usage
-WHERE timestamp >= NOW() - INTERVAL '30 days'
-GROUP BY operation_type;
-```
-
-## Development
-
-### Available Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint
-- `npm run type-check` - Run TypeScript compiler check
-- `npm test` - Run all tests (unit + E2E)
-- `npm run test:unit` - Run unit tests
-- `npm run test:e2e` - Run E2E tests
-
-### Running Tests
-
-Unit tests:
 ```bash
-npm run test:unit
+npm run dev          # dev server
+npm run build        # production build
+npm run lint         # ESLint
+npm run type-check   # tsc --noEmit
+npm run test:unit    # vitest
+npm run test:e2e     # playwright
+npm run test:e2e:ui  # playwright with browser UI
 ```
 
-E2E tests:
-```bash
-npm run test:e2e
-```
-
-E2E tests with UI:
-```bash
-npm run test:e2e:ui
-```
-
-### Code Quality Standards
-
-Every commit must pass:
-- `npm run lint` - No ESLint errors or warnings
-- `npm run build` - Successful production build
-- `npm test` - All tests passing
-- No `any` types without justification
-- Error states and loading states included
-- Input validation and auth checks for all write operations
-
-## Project Structure
-
-```
-├── src/
-│   ├── app/                 # Next.js App Router pages
-│   ├── components/          # React components
-│   ├── lib/                 # Utilities and configurations
-│   ├── schemas/             # Zod validation schemas
-│   ├── server/              # Server actions
-│   └── types/               # TypeScript type definitions
-├── tests/                   # E2E tests
-├── supabase/
-│   └── migrations/          # Database migrations
-└── public/                  # Static assets
-```
-
-## Contributing
-
-1. Follow the Definition of Done (DoD) for all PRs
-2. Write tests for new features
-3. Update documentation as needed
-4. Run `npm run lint` and `npm run build` before committing
+---
 
 ## License
 
