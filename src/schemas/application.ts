@@ -218,3 +218,20 @@ export type CreateContactInput = z.infer<typeof createContactSchema>;
 export type UpdateContactInput = z.infer<typeof updateContactSchema>;
 export type CreateTagInput = z.infer<typeof createTagSchema>;
 export type UpdateTagInput = z.infer<typeof updateTagSchema>;
+
+// Import validation (Ticket #33: ATS Imports)
+export const IMPORT_MAX_ROWS = 500;
+export const IMPORT_MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+export const importSourceSchema = z.enum(['linkedin', 'indeed', 'greenhouse', 'generic_csv']);
+
+export const greenhouseImportSchema = z.object({
+  api_key: z.string().min(1, 'Greenhouse API key is required').max(200).transform((v) => v.trim()),
+  company_name: z
+    .string()
+    .min(1, 'Company name is required')
+    .max(255)
+    .transform((v) => v.trim()),
+});
+
+export type GreenhouseImportInput = z.infer<typeof greenhouseImportSchema>;

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ApplicationsTable } from "@/components/applications/ApplicationsTable";
 import { MobileApplicationList } from "@/components/applications/MobileApplicationList";
 import { Plus, LayoutGrid, Table as TableIcon } from "lucide-react";
+import { ImportButton } from "@/components/import/ImportButton";
 import type { ApplicationRow } from "@/components/applications/columns";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -208,14 +209,17 @@ function DashboardClientContent({ userName }: DashboardClientContentProps) {
               Welcome back, {userName}
             </p>
           </div>
-          <Button
-            onClick={() => setDialogOpen(true)}
-            size="lg"
-            className="hidden sm:flex w-auto"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            New Application
-          </Button>
+          <div className="hidden sm:flex items-center gap-2">
+            <ImportButton onSuccess={handleSuccess} />
+            <Button
+              onClick={() => setDialogOpen(true)}
+              size="lg"
+              className="w-auto"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              New Application
+            </Button>
+          </div>
         </div>
 
         {/* Stats Overview */}

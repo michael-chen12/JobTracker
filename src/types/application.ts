@@ -197,3 +197,37 @@ export interface ContactFormData {
   contact_type?: ContactType;
   notes?: string;
 }
+
+// Import types (Ticket #33: ATS Imports)
+export type ImportSource = 'linkedin' | 'indeed' | 'greenhouse' | 'generic_csv';
+export type ImportStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+export type ImportLog = {
+  id: string;
+  user_id: string;
+  source: ImportSource;
+  total_rows: number;
+  imported_count: number;
+  skipped_count: number;
+  failed_count: number;
+  status: ImportStatus;
+  error_message: string | null;
+  greenhouse_company: string | null;
+  created_at: string;
+  completed_at: string | null;
+};
+
+// Normalized row after CSV/API parsing, before DB insert
+export type ImportCandidate = {
+  company: string;
+  position: string;
+  applied_date: string | null; // ISO date string or null
+  job_url: string | null;
+  source: string; // human-readable source label (e.g. 'LinkedIn', 'Greenhouse')
+  status: ApplicationStatus;
+};
+
+export type DeduplicatedBatch = {
+  toInsert: ImportCandidate[];
+  skippedCount: number;
+};

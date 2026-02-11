@@ -3,11 +3,69 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { uploadResume, deleteResume } from '@/actions/resumes';
 import { triggerResumeParsing, getParsingJobStatus } from '@/actions/parse-resume';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Upload, FileText, X, Loader2, Sparkles } from 'lucide-react';
+
+function ParsedResumeSkeleton() {
+  return (
+    <div className="mt-6 space-y-4" aria-label="Loading parsed resume data" aria-busy="true">
+      <div className="flex items-center gap-2 mb-1">
+        <Skeleton className="h-4 w-4 rounded-full" />
+        <Skeleton className="h-4 w-40" />
+      </div>
+
+      {/* Contact */}
+      <div className="p-4 border rounded-lg space-y-3">
+        <Skeleton className="h-5 w-44" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="p-4 border rounded-lg space-y-2">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+        <Skeleton className="h-4 w-4/6" />
+      </div>
+
+      {/* Skills */}
+      <div className="p-4 border rounded-lg space-y-3">
+        <Skeleton className="h-5 w-20" />
+        <div className="flex flex-wrap gap-2">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-6 w-16 rounded-full" />
+          ))}
+        </div>
+      </div>
+
+      {/* Experience */}
+      <div className="p-4 border rounded-lg space-y-4">
+        <Skeleton className="h-5 w-36" />
+        {[1, 2].map((i) => (
+          <div key={i} className="pb-4 border-b last:border-b-0 space-y-2">
+            <div className="flex justify-between">
+              <div className="space-y-1">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-3 w-28" />
+              </div>
+              <Skeleton className="h-3 w-24" />
+            </div>
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 interface ResumeUploadProps {
   currentResumeUrl: string | null;
@@ -277,6 +335,10 @@ export function ResumeUpload({ currentResumeUrl, isParsed = false }: ResumeUploa
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900" />
           Uploading...
         </div>
+      )}
+
+      {(parsingStatus === 'pending' || parsingStatus === 'processing') && (
+        <ParsedResumeSkeleton />
       )}
     </div>
   );
