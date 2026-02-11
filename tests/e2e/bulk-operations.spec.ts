@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/e2e-fixtures';
 
 /**
  * E2E Tests for Bulk Operations Feature
@@ -14,7 +14,7 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Bulk Operations', () => {
-  test.skip('should select multiple applications and show bulk actions toolbar', async ({
+  test('should select multiple applications and show bulk actions toolbar', async ({
     page,
   }) => {
     // Navigate to applications page
@@ -40,7 +40,7 @@ test.describe('Bulk Operations', () => {
     await expect(rows).toHaveCount(3);
   });
 
-  test.skip('should select all applications on current page', async ({
+  test('should select all applications on current page', async ({
     page,
   }) => {
     await page.goto('/dashboard/applications');
@@ -62,7 +62,7 @@ test.describe('Bulk Operations', () => {
     expect(count).toBeGreaterThan(0);
   });
 
-  test.skip('should clear selection when clicking Clear button', async ({
+  test('should clear selection when clicking Clear button', async ({
     page,
   }) => {
     await page.goto('/dashboard/applications');
@@ -86,7 +86,7 @@ test.describe('Bulk Operations', () => {
     await expect(page.getByPlaceholder('Search applications...')).toBeVisible();
   });
 
-  test.skip('should change status for selected applications', async ({
+  test('should change status for selected applications', async ({
     page,
   }) => {
     await page.goto('/dashboard/applications');
@@ -113,7 +113,7 @@ test.describe('Bulk Operations', () => {
     await expect(page.getByText(/selected/)).not.toBeVisible();
   });
 
-  test.skip('should delete selected applications with confirmation', async ({
+  test('should delete selected applications with confirmation', async ({
     page,
   }) => {
     await page.goto('/dashboard/applications');
@@ -155,7 +155,7 @@ test.describe('Bulk Operations', () => {
     await expect(page.getByText(/selected/)).not.toBeVisible();
   });
 
-  test.skip('should clear selection when changing pages', async ({ page }) => {
+  test('should clear selection when changing pages', async ({ authPage: page }) => {
     await page.goto('/dashboard/applications');
     await page.waitForSelector('table');
 
@@ -177,7 +177,7 @@ test.describe('Bulk Operations', () => {
     await expect(page.getByPlaceholder('Search applications...')).toBeVisible();
   });
 
-  test.skip('should display error for more than 50 selected applications', async ({
+  test('should display error for more than 50 selected applications', async ({
     page,
   }) => {
     // This test requires a way to create 51+ applications for testing
@@ -185,7 +185,7 @@ test.describe('Bulk Operations', () => {
     test.skip(true, 'Requires test data with 51+ applications');
   });
 
-  test.skip('should render responsive layout on mobile', async ({ page }) => {
+  test('should render responsive layout on mobile', async ({ authPage: page }) => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
 

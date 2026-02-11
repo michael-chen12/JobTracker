@@ -1,31 +1,31 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/e2e-fixtures';
 
 test.describe('Data Export & GDPR Compliance', () => {
-  test.skip('should display Data & Privacy section on profile page', async ({ page }) => {
+  test('should display Data & Privacy section on profile page', async ({ authPage: page }) => {
     await page.goto('/dashboard/profile');
     await expect(page.locator('text=Export Your Data')).toBeVisible();
     await expect(page.locator('text=Danger Zone')).toBeVisible();
   });
 
-  test.skip('should not show Coming Soon card', async ({ page }) => {
+  test('should not show Coming Soon card', async ({ authPage: page }) => {
     await page.goto('/dashboard/profile');
     await expect(page.locator('text=Coming Soon')).not.toBeVisible();
   });
 
-  test.skip('should show JSON and CSV export format options', async ({ page }) => {
+  test('should show JSON and CSV export format options', async ({ authPage: page }) => {
     await page.goto('/dashboard/profile');
     await expect(page.locator('text=Complete Data (JSON)')).toBeVisible();
     await expect(page.locator('text=Applications Table (CSV)')).toBeVisible();
   });
 
-  test.skip('should default to JSON export format', async ({ page }) => {
+  test('should default to JSON export format', async ({ authPage: page }) => {
     await page.goto('/dashboard/profile');
     // JSON option should have selected border styling
     const jsonOption = page.locator('button:has-text("Complete Data (JSON)")');
     await expect(jsonOption).toHaveClass(/border-blue-500/);
   });
 
-  test.skip('should trigger export with loading state', async ({ page }) => {
+  test('should trigger export with loading state', async ({ authPage: page }) => {
     await page.goto('/dashboard/profile');
     const exportBtn = page.locator('button:has-text("Export Data")');
     await exportBtn.click();
@@ -33,14 +33,14 @@ test.describe('Data Export & GDPR Compliance', () => {
     await expect(page.locator('.animate-spin')).toBeVisible();
   });
 
-  test.skip('should open delete account dialog', async ({ page }) => {
+  test('should open delete account dialog', async ({ authPage: page }) => {
     await page.goto('/dashboard/profile');
     await page.locator('button:has-text("Delete Account")').click();
     await expect(page.locator('[role="alertdialog"]')).toBeVisible();
     await expect(page.locator('text=Delete Your Account?')).toBeVisible();
   });
 
-  test.skip('should require email confirmation for deletion', async ({ page }) => {
+  test('should require email confirmation for deletion', async ({ authPage: page }) => {
     await page.goto('/dashboard/profile');
     await page.locator('button:has-text("Delete Account")').click();
     // Schedule Deletion button should be disabled by default
@@ -48,7 +48,7 @@ test.describe('Data Export & GDPR Compliance', () => {
     await expect(scheduleBtn).toBeDisabled();
   });
 
-  test.skip('should enable schedule button when email matches', async ({ page }) => {
+  test('should enable schedule button when email matches', async ({ authPage: page }) => {
     await page.goto('/dashboard/profile');
     await page.locator('button:has-text("Delete Account")').click();
     const emailInput = page.locator('input[placeholder*="email"]');
@@ -57,14 +57,14 @@ test.describe('Data Export & GDPR Compliance', () => {
     await expect(scheduleBtn).toBeEnabled();
   });
 
-  test.skip('should show pending deletion status with cancel option', async ({ page }) => {
+  test('should show pending deletion status with cancel option', async ({ authPage: page }) => {
     // This test assumes a pending deletion already exists
     await page.goto('/dashboard/profile');
     await expect(page.locator('text=Account scheduled for deletion')).toBeVisible();
     await expect(page.locator('button:has-text("Cancel Deletion")')).toBeVisible();
   });
 
-  test.skip('should be mobile responsive at 375px viewport', async ({ page }) => {
+  test('should be mobile responsive at 375px viewport', async ({ authPage: page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/dashboard/profile');
     await expect(page.locator('text=Export Your Data')).toBeVisible();

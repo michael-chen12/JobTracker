@@ -14,17 +14,10 @@
  * Currently marked as .skip() until auth flow is implemented.
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/e2e-fixtures';
 
 test.describe('Dashboard Analytics - Page Structure', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to login page
-    await page.goto('/auth/login');
-    // TODO: Add authentication flow once implemented
-    // For now, tests verify component structure when available
-  });
-
-  test.skip('should navigate to analytics page from dashboard navigation', async ({ page }) => {
+  test('should navigate to analytics page from dashboard navigation', async ({ authPage: page }) => {
     // This test requires authentication
     await page.goto('/dashboard');
 
@@ -41,7 +34,7 @@ test.describe('Dashboard Analytics - Page Structure', () => {
     await expect(heading).toBeVisible();
   });
 
-  test.skip('should display all metric cards on analytics page', async ({ page }) => {
+  test('should display all metric cards on analytics page', async ({ authPage: page }) => {
     // This test requires authentication and existing application data
     await page.goto('/dashboard/analytics');
 
@@ -63,7 +56,7 @@ test.describe('Dashboard Analytics - Page Structure', () => {
     }
   });
 
-  test.skip('should display application trends chart', async ({ page }) => {
+  test('should display application trends chart', async ({ authPage: page }) => {
     // This test requires authentication and existing application data
     await page.goto('/dashboard/analytics');
 
@@ -79,7 +72,7 @@ test.describe('Dashboard Analytics - Page Structure', () => {
     await expect(chartSvg).toBeVisible();
   });
 
-  test.skip('should display status distribution pie chart', async ({ page }) => {
+  test('should display status distribution pie chart', async ({ authPage: page }) => {
     // This test requires authentication and existing application data
     await page.goto('/dashboard/analytics');
 
@@ -97,7 +90,7 @@ test.describe('Dashboard Analytics - Page Structure', () => {
     await expect(pieChart).toBeVisible();
   });
 
-  test.skip('should display application funnel visualization', async ({ page }) => {
+  test('should display application funnel visualization', async ({ authPage: page }) => {
     // This test requires authentication and existing application data
     await page.goto('/dashboard/analytics');
 
@@ -118,12 +111,7 @@ test.describe('Dashboard Analytics - Page Structure', () => {
 });
 
 test.describe('Dashboard Analytics - Date Range Filtering', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/auth/login');
-    // TODO: Add authentication flow
-  });
-
-  test.skip('should have date range selector with 4 options', async ({ page }) => {
+  test('should have date range selector with 4 options', async ({ authPage: page }) => {
     // This test requires authentication
     await page.goto('/dashboard/analytics');
 
@@ -139,7 +127,7 @@ test.describe('Dashboard Analytics - Date Range Filtering', () => {
     }
   });
 
-  test.skip('should filter analytics data when date range changes', async ({ page }) => {
+  test('should filter analytics data when date range changes', async ({ authPage: page }) => {
     // This test requires authentication and existing application data
     await page.goto('/dashboard/analytics');
 
@@ -174,7 +162,7 @@ test.describe('Dashboard Analytics - Date Range Filtering', () => {
     await expect(ninetyDaysButton).toHaveAttribute('data-state', 'active');
   });
 
-  test.skip('should highlight active date range button', async ({ page }) => {
+  test('should highlight active date range button', async ({ authPage: page }) => {
     // This test requires authentication
     await page.goto('/dashboard/analytics');
 
@@ -198,14 +186,12 @@ test.describe('Dashboard Analytics - Date Range Filtering', () => {
 });
 
 test.describe('Dashboard Analytics - Mobile Responsiveness', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ authPage: page }) => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 }); // iPhone SE size
-    await page.goto('/auth/login');
-    // TODO: Add authentication flow
   });
 
-  test.skip('should display analytics page on mobile viewport', async ({ page }) => {
+  test('should display analytics page on mobile viewport', async ({ authPage: page }) => {
     // This test requires authentication
     await page.goto('/dashboard/analytics');
 
@@ -222,7 +208,7 @@ test.describe('Dashboard Analytics - Mobile Responsiveness', () => {
     await expect(firstCard).toBeVisible();
   });
 
-  test.skip('should allow horizontal scroll for date range selector on mobile', async ({
+  test('should allow horizontal scroll for date range selector on mobile', async ({
     page,
   }) => {
     // This test requires authentication
@@ -236,7 +222,7 @@ test.describe('Dashboard Analytics - Mobile Responsiveness', () => {
     await expect(allTimeButton).toBeVisible();
   });
 
-  test.skip('should render charts responsively on mobile', async ({ page }) => {
+  test('should render charts responsively on mobile', async ({ authPage: page }) => {
     // This test requires authentication and existing application data
     await page.goto('/dashboard/analytics');
 
@@ -256,12 +242,7 @@ test.describe('Dashboard Analytics - Mobile Responsiveness', () => {
 });
 
 test.describe('Dashboard Analytics - Empty State', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/auth/login');
-    // TODO: Add authentication flow
-  });
-
-  test.skip('should display empty state when no applications exist', async ({ page }) => {
+  test('should display empty state when no applications exist', async ({ authPage: page }) => {
     // This test requires authentication with a NEW user account (no applications)
     await page.goto('/dashboard/analytics');
 
@@ -285,12 +266,7 @@ test.describe('Dashboard Analytics - Empty State', () => {
 });
 
 test.describe('Dashboard Analytics - Metric Calculations', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/auth/login');
-    // TODO: Add authentication flow
-  });
-
-  test.skip('should calculate response rate correctly', async ({ page }) => {
+  test('should calculate response rate correctly', async ({ authPage: page }) => {
     // This test requires authentication and controlled test data:
     // - 10 applications total
     // - 3 with status 'screening' or higher (responses)
@@ -315,7 +291,7 @@ test.describe('Dashboard Analytics - Metric Calculations', () => {
     // Example: expect(responseRateValue).toBe('30%');
   });
 
-  test.skip('should calculate interview rate correctly', async ({ page }) => {
+  test('should calculate interview rate correctly', async ({ authPage: page }) => {
     // This test requires authentication and controlled test data:
     // - 10 applications total
     // - 2 with status 'interviewing' or higher
@@ -337,7 +313,7 @@ test.describe('Dashboard Analytics - Metric Calculations', () => {
     expect(interviewRateValue).toContain('%');
   });
 
-  test.skip('should display N/A for undefined metrics', async ({ page }) => {
+  test('should display N/A for undefined metrics', async ({ authPage: page }) => {
     // This test requires authentication with no application data
     // or specific scenario where metric is undefined
     await page.goto('/dashboard/analytics');
@@ -359,12 +335,7 @@ test.describe('Dashboard Analytics - Metric Calculations', () => {
 });
 
 test.describe('Dashboard Analytics - Navigation Accessibility', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/auth/login');
-    // TODO: Add authentication flow
-  });
-
-  test.skip('should have accessible navigation link to analytics', async ({ page }) => {
+  test('should have accessible navigation link to analytics', async ({ authPage: page }) => {
     // This test requires authentication
     await page.goto('/dashboard');
 
@@ -381,7 +352,7 @@ test.describe('Dashboard Analytics - Navigation Accessibility', () => {
     await expect(page).toHaveURL('/dashboard/analytics');
   });
 
-  test.skip('should indicate active analytics page in navigation', async ({ page }) => {
+  test('should indicate active analytics page in navigation', async ({ authPage: page }) => {
     // This test requires authentication
     await page.goto('/dashboard/analytics');
 
@@ -395,7 +366,7 @@ test.describe('Dashboard Analytics - Navigation Accessibility', () => {
 });
 
 test.describe('Dashboard Analytics - API Route', () => {
-  test.skip('should fetch analytics data from API endpoint', async ({ page, request }) => {
+  test('should fetch analytics data from API endpoint', async ({ authPage: page, request }) => {
     // This test requires authentication
     await page.goto('/dashboard');
 
@@ -421,7 +392,7 @@ test.describe('Dashboard Analytics - API Route', () => {
     }
   });
 
-  test.skip('should validate date range parameter in API route', async ({ request, page }) => {
+  test('should validate date range parameter in API route', async ({ request, page }) => {
     // This test requires authentication
     await page.goto('/dashboard');
 
@@ -437,7 +408,7 @@ test.describe('Dashboard Analytics - API Route', () => {
     }
   });
 
-  test.skip('should default to 30 days when range parameter is invalid', async ({
+  test('should default to 30 days when range parameter is invalid', async ({
     request,
     page,
   }) => {
@@ -452,7 +423,7 @@ test.describe('Dashboard Analytics - API Route', () => {
     expect(data.data?.dateRange).toBe('30'); // Should default to 30
   });
 
-  test.skip('should return 401 when not authenticated', async ({ request }) => {
+  test('should return 401 when not authenticated', async ({ request }) => {
     // Make request without authentication
     const response = await request.get('/api/analytics?range=30');
 

@@ -5,7 +5,8 @@
  * Tests complete user flows for logging and managing contact interactions
  */
 
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '../fixtures/e2e-fixtures';
+import type { Page } from '../fixtures/e2e-fixtures';
 
 // Helper function to create a test contact
 async function createTestContact(page: Page, name: string = 'Test Contact') {
@@ -27,7 +28,7 @@ async function createTestContact(page: Page, name: string = 'Test Contact') {
 }
 
 test.describe('Interaction History', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ authPage: page }) => {
     // Login first (adjust based on your auth flow)
     await page.goto('/login');
     // Add login steps here...
@@ -54,7 +55,7 @@ test.describe('Interaction History', () => {
     await expect(page.getByText(/no interactions yet/i)).toBeVisible();
   });
 
-  test('should log an email interaction successfully', async ({ page }) => {
+  test('should log an email interaction successfully', async ({ authPage: page }) => {
     // Navigate to a contact detail page
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /view details/i }).first().click();
@@ -92,7 +93,7 @@ test.describe('Interaction History', () => {
     await expect(page.getByText(/email/i)).toBeVisible();
   });
 
-  test('should prevent logging future-dated interactions', async ({ page }) => {
+  test('should prevent logging future-dated interactions', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /view details/i }).first().click();
 
@@ -126,7 +127,7 @@ test.describe('Interaction History', () => {
     await expect(futureInteraction).not.toBeVisible();
   });
 
-  test('should filter interactions by type', async ({ page }) => {
+  test('should filter interactions by type', async ({ authPage: page }) => {
     // Setup: Create contact and add multiple interaction types
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /view details/i }).first().click();
@@ -165,7 +166,7 @@ test.describe('Interaction History', () => {
     await expect(page.getByText(/phone call interaction/i)).toBeVisible();
   });
 
-  test('should filter interactions by date range', async ({ page }) => {
+  test('should filter interactions by date range', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /view details/i }).first().click();
 
@@ -187,7 +188,7 @@ test.describe('Interaction History', () => {
     await expect(page.getByText(/filters/i)).toContainText('2'); // 2 date filters
   });
 
-  test('should delete interaction with confirmation', async ({ page }) => {
+  test('should delete interaction with confirmation', async ({ authPage: page }) => {
     // Setup: Create interaction
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /view details/i }).first().click();
@@ -219,7 +220,7 @@ test.describe('Interaction History', () => {
     await expect(page.getByText(/interaction to delete/i)).not.toBeVisible();
   });
 
-  test('should expand and collapse long notes', async ({ page }) => {
+  test('should expand and collapse long notes', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /view details/i }).first().click();
 
@@ -249,7 +250,7 @@ test.describe('Interaction History', () => {
     await expect(page.getByText(/read more/i)).toBeVisible();
   });
 
-  test('should update relationship strength badge', async ({ page }) => {
+  test('should update relationship strength badge', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /view details/i }).first().click();
 
@@ -297,7 +298,7 @@ test.describe('Interaction History', () => {
     await expect(page.getByText(/850.*1000/)).toBeVisible();
   });
 
-  test('should display interaction stats correctly', async ({ page }) => {
+  test('should display interaction stats correctly', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /view details/i }).first().click();
 
@@ -345,7 +346,7 @@ test.describe('Interaction History', () => {
     // (This would need to be simulated with mock server error)
   });
 
-  test('should navigate back to contacts list', async ({ page }) => {
+  test('should navigate back to contacts list', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /view details/i }).first().click();
 
@@ -356,7 +357,7 @@ test.describe('Interaction History', () => {
     await expect(page).toHaveURL('/dashboard/contacts');
   });
 
-  test('should display all interaction types correctly', async ({ page }) => {
+  test('should display all interaction types correctly', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /view details/i }).first().click();
 
@@ -388,7 +389,7 @@ test.describe('Interaction History', () => {
 test.describe('Interaction History - Mobile', () => {
   test.use({ viewport: { width: 375, height: 667 } }); // iPhone SE
 
-  test('should be fully functional on mobile', async ({ page }) => {
+  test('should be fully functional on mobile', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /view details/i }).first().click();
 
@@ -408,7 +409,7 @@ test.describe('Interaction History - Mobile', () => {
 });
 
 test.describe('Interaction History - Security', () => {
-  test('should not allow XSS in notes field', async ({ page }) => {
+  test('should not allow XSS in notes field', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /view details/i }).first().click();
 
@@ -428,7 +429,7 @@ test.describe('Interaction History - Security', () => {
     // No alert should have fired
   });
 
-  test('should enforce 1000 character limit on notes', async ({ page }) => {
+  test('should enforce 1000 character limit on notes', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /view details/i }).first().click();
 

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/e2e-fixtures';
 
 /**
  * E2E tests for multi-provider auth system.
@@ -6,22 +6,19 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Auth - Login Page', () => {
-  test.skip('should display login and register tabs', async ({ page }) => {
-    await page.goto('/auth/login');
+  test('should display login and register tabs', async ({ authPage: page }) => {
     await expect(page.getByRole('tab', { name: 'Sign In' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Sign Up' })).toBeVisible();
   });
 
-  test.skip('should show email/password form in login tab', async ({ page }) => {
-    await page.goto('/auth/login');
+  test('should show email/password form in login tab', async ({ authPage: page }) => {
     await expect(page.getByLabel('Email')).toBeVisible();
     await expect(page.getByLabel('Password')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign In' })).toBeVisible();
     await expect(page.getByText('Forgot password?')).toBeVisible();
   });
 
-  test.skip('should show register form with password strength meter', async ({ page }) => {
-    await page.goto('/auth/login');
+  test('should show register form with password strength meter', async ({ authPage: page }) => {
     await page.getByRole('tab', { name: 'Sign Up' }).click();
     await expect(page.getByLabel('Email')).toBeVisible();
     await expect(page.getByLabel('Password', { exact: false })).toBeVisible();
@@ -29,22 +26,19 @@ test.describe('Auth - Login Page', () => {
     await expect(page.getByRole('button', { name: 'Create Account' })).toBeVisible();
   });
 
-  test.skip('should show OAuth buttons (Google, GitHub, LinkedIn)', async ({ page }) => {
-    await page.goto('/auth/login');
+  test('should show OAuth buttons (Google, GitHub, LinkedIn)', async ({ authPage: page }) => {
     await expect(page.getByRole('button', { name: /Google/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /GitHub/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /LinkedIn/i })).toBeVisible();
   });
 
-  test.skip('should validate login form - required fields', async ({ page }) => {
-    await page.goto('/auth/login');
+  test('should validate login form - required fields', async ({ authPage: page }) => {
     await page.getByRole('button', { name: 'Sign In' }).click();
     await expect(page.getByText('Email is required')).toBeVisible();
     await expect(page.getByText('Password is required')).toBeVisible();
   });
 
-  test.skip('should validate register form - password rules', async ({ page }) => {
-    await page.goto('/auth/login');
+  test('should validate register form - password rules', async ({ authPage: page }) => {
     await page.getByRole('tab', { name: 'Sign Up' }).click();
     await page.getByLabel('Email').fill('test@example.com');
     await page.getByLabel('Password', { exact: true }).fill('weak');
@@ -53,8 +47,7 @@ test.describe('Auth - Login Page', () => {
     await expect(page.getByText(/at least 8 characters/i)).toBeVisible();
   });
 
-  test.skip('should show password strength indicator', async ({ page }) => {
-    await page.goto('/auth/login');
+  test('should show password strength indicator', async ({ authPage: page }) => {
     await page.getByRole('tab', { name: 'Sign Up' }).click();
     await page.getByLabel('Password', { exact: true }).fill('Ab');
     await expect(page.getByText('Weak')).toBeVisible();
@@ -64,20 +57,19 @@ test.describe('Auth - Login Page', () => {
 });
 
 test.describe('Auth - Forgot Password', () => {
-  test.skip('should navigate to forgot password page', async ({ page }) => {
-    await page.goto('/auth/login');
+  test('should navigate to forgot password page', async ({ authPage: page }) => {
     await page.getByText('Forgot password?').click();
     await expect(page).toHaveURL('/auth/forgot-password');
     await expect(page.getByText('Reset Password')).toBeVisible();
   });
 
-  test.skip('should show forgot password form', async ({ page }) => {
+  test('should show forgot password form', async ({ authPage: page }) => {
     await page.goto('/auth/forgot-password');
     await expect(page.getByLabel('Email')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Send Reset Link' })).toBeVisible();
   });
 
-  test.skip('should navigate back to login from forgot password', async ({ page }) => {
+  test('should navigate back to login from forgot password', async ({ authPage: page }) => {
     await page.goto('/auth/forgot-password');
     await page.getByText('Back to sign in').click();
     await expect(page).toHaveURL('/auth/login');
@@ -85,7 +77,7 @@ test.describe('Auth - Forgot Password', () => {
 });
 
 test.describe('Auth - Reset Password', () => {
-  test.skip('should show reset password form', async ({ page }) => {
+  test('should show reset password form', async ({ authPage: page }) => {
     await page.goto('/auth/reset-password');
     await expect(page.getByText('Set New Password')).toBeVisible();
     await expect(page.getByLabel('New Password')).toBeVisible();
@@ -95,7 +87,7 @@ test.describe('Auth - Reset Password', () => {
 });
 
 test.describe('Auth - Onboarding', () => {
-  test.skip('should show onboarding page content', async ({ page }) => {
+  test('should show onboarding page content', async ({ authPage: page }) => {
     await page.goto('/auth/onboarding');
     await expect(page.getByText(/Welcome/)).toBeVisible();
     await expect(page.getByRole('link', { name: /Dashboard/ })).toBeVisible();
@@ -104,7 +96,7 @@ test.describe('Auth - Onboarding', () => {
 });
 
 test.describe('Auth - Error Page', () => {
-  test.skip('should show auth error page content', async ({ page }) => {
+  test('should show auth error page content', async ({ authPage: page }) => {
     await page.goto('/auth/auth-code-error');
     await expect(page.getByText('Something went wrong')).toBeVisible();
     await expect(page.getByRole('link', { name: /sign in/i })).toBeVisible();

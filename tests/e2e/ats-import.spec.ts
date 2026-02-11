@@ -1,7 +1,7 @@
-import { test, expect } from '@playwright/test';
-import path from 'path';
-import fs from 'fs';
-import os from 'os';
+import { test, expect } from '../fixtures/e2e-fixtures';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
 
 // All E2E tests are skipped until auth is configured.
 // To enable: remove test.skip() and configure auth in playwright.config.ts.
@@ -54,12 +54,12 @@ function createOversizedCsv(): string {
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 test.describe('ATS Import Wizard', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ authPage: page }) => {
     // Navigate to the dashboard where the Import button lives
     await page.goto('/dashboard');
   });
 
-  test.skip('Import button opens wizard dialog', async ({ page }) => {
+  test('Import button opens wizard dialog', async ({ authPage: page }) => {
     const importBtn = page.getByRole('button', { name: /import/i });
     await expect(importBtn).toBeVisible();
 
@@ -70,7 +70,7 @@ test.describe('ATS Import Wizard', () => {
     await expect(page.getByText('Import Applications')).toBeVisible();
   });
 
-  test.skip('Source step shows all 4 import options', async ({ page }) => {
+  test('Source step shows all 4 import options', async ({ authPage: page }) => {
     await page.getByRole('button', { name: /import/i }).click();
 
     await expect(page.getByText('LinkedIn')).toBeVisible();
@@ -79,7 +79,7 @@ test.describe('ATS Import Wizard', () => {
     await expect(page.getByText('Generic CSV')).toBeVisible();
   });
 
-  test.skip('LinkedIn happy path: upload CSV → preview → confirm → result', async ({ page }) => {
+  test('LinkedIn happy path: upload CSV → preview → confirm → result', async ({ authPage: page }) => {
     const csvPath = createLinkedInCsv();
 
     await page.getByRole('button', { name: /import/i }).click();
@@ -112,7 +112,7 @@ test.describe('ATS Import Wizard', () => {
     fs.unlinkSync(csvPath);
   });
 
-  test.skip('Generic CSV: field mapper appears and allows column mapping', async ({ page }) => {
+  test('Generic CSV: field mapper appears and allows column mapping', async ({ authPage: page }) => {
     const csvPath = createGenericCsv();
 
     await page.getByRole('button', { name: /import/i }).click();
@@ -134,7 +134,7 @@ test.describe('ATS Import Wizard', () => {
     fs.unlinkSync(csvPath);
   });
 
-  test.skip('Duplicate detection: second upload skips all rows', async ({ page }) => {
+  test('Duplicate detection: second upload skips all rows', async ({ authPage: page }) => {
     const csvPath = createLinkedInCsv();
 
     // First import
@@ -159,7 +159,7 @@ test.describe('ATS Import Wizard', () => {
     fs.unlinkSync(csvPath);
   });
 
-  test.skip('Empty CSV file shows error state', async ({ page }) => {
+  test('Empty CSV file shows error state', async ({ authPage: page }) => {
     const csvPath = createEmptyCsv();
 
     await page.getByRole('button', { name: /import/i }).click();
@@ -174,7 +174,7 @@ test.describe('ATS Import Wizard', () => {
     fs.unlinkSync(csvPath);
   });
 
-  test.skip('Oversized file (>5MB) is rejected at upload step', async ({ page }) => {
+  test('Oversized file (>5MB) is rejected at upload step', async ({ authPage: page }) => {
     const csvPath = createOversizedCsv();
 
     await page.getByRole('button', { name: /import/i }).click();
@@ -189,7 +189,7 @@ test.describe('ATS Import Wizard', () => {
     fs.unlinkSync(csvPath);
   });
 
-  test.skip('Greenhouse invalid API key shows error message', async ({ page }) => {
+  test('Greenhouse invalid API key shows error message', async ({ authPage: page }) => {
     await page.getByRole('button', { name: /import/i }).click();
     await page.getByText('Greenhouse ATS').click();
 
@@ -203,7 +203,7 @@ test.describe('ATS Import Wizard', () => {
     ).toBeVisible();
   });
 
-  test.skip('Cancel mid-wizard closes dialog without data insert', async ({ page }) => {
+  test('Cancel mid-wizard closes dialog without data insert', async ({ authPage: page }) => {
     const csvPath = createLinkedInCsv();
 
     await page.getByRole('button', { name: /import/i }).click();
@@ -225,7 +225,7 @@ test.describe('ATS Import Wizard', () => {
     fs.unlinkSync(csvPath);
   });
 
-  test.skip('Back button navigates through wizard steps', async ({ page }) => {
+  test('Back button navigates through wizard steps', async ({ authPage: page }) => {
     await page.getByRole('button', { name: /import/i }).click();
 
     // Select LinkedIn (moves to upload step)
@@ -237,7 +237,7 @@ test.describe('ATS Import Wizard', () => {
     await expect(page.getByText('Import Applications')).toBeVisible();
   });
 
-  test.skip('Result step Done button closes dialog and refreshes page', async ({ page }) => {
+  test('Result step Done button closes dialog and refreshes page', async ({ authPage: page }) => {
     const csvPath = createLinkedInCsv();
 
     await page.getByRole('button', { name: /import/i }).click();

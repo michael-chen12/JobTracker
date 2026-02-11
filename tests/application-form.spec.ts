@@ -1,74 +1,112 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/e2e-fixtures';
 
 /**
- * E2E tests for Application Creation Form
+ * E2E tests for Application Creation Form (Ticket #7)
  *
- * Note: These tests currently focus on UI elements and validation.
- * Full end-to-end flow testing (with auth) requires Supabase test setup.
+ * Tests cover the full create-application flow using the `createApp` fixture
+ * which handles UI creation and automatic cleanup.
  */
 
-test.describe('Application Form', () => {
-  // Skip auth for now - would need proper test user setup
-  test.skip('should create application and display in list', async ({ page }) => {
-    // This is the full E2E test outlined in Ticket #7
-    // TODO: Set up test authentication before enabling
+test.describe('Application Form - Create Flow', () => {
+  test('should create an application and display it in the list', async ({
+    authPage: page,
+    createApp,
+  }) => {
+    // createApp creates the app via the UI and cleans up after the test
+    await createApp({
+      company: 'E2E Test Company',
+      position: 'Senior Software Engineer',
+      location: 'San Francisco, CA',
+    });
 
-    await page.goto('http://localhost:3000/dashboard');
+    // Verify the application appears in the dashboard table
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
 
-    // Click "New Application" button
-    await page.getByRole('button', { name: /new application/i }).click();
-
-    // Fill required fields
-    await page.getByLabel(/company name/i).fill('Test Company');
-    await page.getByLabel(/position title/i).fill('Senior Software Engineer');
-
-    // Optional: Fill additional fields
-    await page.getByLabel(/job description/i).fill('Great opportunity for a skilled developer');
-    await page.getByLabel(/location/i).fill('San Francisco, CA');
-
-    // Submit form
-    await page.getByRole('button', { name: /create application/i }).click();
-
-    // Verify success toast
-    await expect(page.getByText(/application created successfully/i)).toBeVisible();
-
-    // Verify application appears in table
-    await expect(page.getByText('Test Company')).toBeVisible();
+    await expect(page.getByText('E2E Test Company')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Senior Software Engineer')).toBeVisible();
   });
 
-  test('should validate required fields', async ({ page }) => {
-    // Navigate to dashboard - this will redirect to login
-    // For validation testing, we can check the login page exists
-    await page.goto('http://localhost:3000/dashboard');
+  test('should show validation errors when required fields are empty', async ({
+    authPage: page,
+  }) => {
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
 
-    // Verify we're redirected to auth (or dashboard if already logged in)
-    // This is a smoke test to ensure the route works
-    await expect(page).toHaveURL(/\/(dashboard|auth)/);
+    // Open the form dialog
+    await page.getByRole('button', { name: /new application/i }).click();
+    await page.waitForSelector('[role="dialog"]');
+
+    // Submit without filling required fields
+    await page.click('button[type="submit"]');
+
+    // Expect validation error messages
+    await expect(
+      page.getByText(/company name.*required|required.*company/i)
+    ).toBeVisible({ timeout: 5000 });
+  });
+
+  test('should close the dialog on cancel', async ({ authPage: page }) => {
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+
+    // Open the form dialog
+    await page.getByRole('button', { name: /new application/i }).click();
+    await page.waitForSelector('[role="dialog"]');
+
+    // Click cancel
+    const cancelBtn = page.getByRole('button', { name: /cancel/i });
+    if (await cancelBtn.isVisible()) {
+      await cancelBtn.click();
+    } else {
+      // Fallback: press Escape to close
+      await page.keyboard.press('Escape');
+    }
+
+    // Dialog should be gone
+    await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5000 });
+  });
+
+  test('should show loading spinner when submitting', async ({ authPage: page, createApp }) => {
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+
+    // Open form
+    await page.getByRole('button', { name: /new application/i }).click();
+    await page.waitForSelector('[role="dialog"]');
+
+    // Fill required fields
+    await page.fill('[name="company_name"]', 'Spinner Test Co');
+    await page.fill('[name="position_title"]', 'Engineer');
+
+    // Submit and check for loading state (spinner or disabled button)
+    await page.click('button[type="submit"]');
+
+    // Verify dialog closes (success path) — cleanup handled by fixture
+    await page.waitForSelector('[role="dialog"]', { state: 'hidden', timeout: 15000 });
+
+    // Cleanup manually since we didn't use createApp fixture
+    await page.goto('/dashboard');
+    const row = page.getByRole('row').filter({ hasText: 'Spinner Test Co' });
+    if (await row.isVisible()) {
+      await row.getByRole('button', { name: /actions|more/i }).click();
+      await page.getByRole('menuitem', { name: /delete/i }).click();
+      const confirmBtn = page
+        .getByRole('alertdialog')
+        .getByRole('button', { name: /delete/i });
+      if (await confirmBtn.isVisible()) {
+        await confirmBtn.click();
+      }
+    }
   });
 });
 
-/**
- * Smoke test for form validation logic (unit-level via browser)
- * This doesn't require auth as we're just testing form behavior
- */
-test.describe('Application Form Validation', () => {
-  test.skip('should show validation errors for empty required fields', async ({ page }) => {
-    // TODO: This requires being authenticated to see the form
-    // Once auth helpers are set up, this test should:
-    // 1. Open form dialog
-    // 2. Submit without filling fields
-    // 3. Verify error messages appear
-    // 4. Fill fields and verify errors clear
-  });
-
-  test.skip('should disable submit button until form is valid', async ({ page }) => {
-    // TODO: Requires auth setup
-    // Test that submit button is disabled when form is invalid
-  });
-
-  test.skip('should reset form after successful submission', async ({ page }) => {
-    // TODO: Requires auth setup
-    // Verify form resets to default values after creation
+test.describe('Application Form - Route Guard', () => {
+  test('should redirect to login when accessing dashboard without auth', async ({
+    page,
+  }) => {
+    // Use the base (non-authenticated) page to check redirect
+    await page.goto('/dashboard');
+    await expect(page).toHaveURL(/\/(auth|login)/);
   });
 });

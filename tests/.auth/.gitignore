@@ -1,0 +1,2 @@
+# Playwright auth state files (contain session tokens — never commit!)
+*.json

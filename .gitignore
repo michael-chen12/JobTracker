@@ -51,3 +51,6 @@ node_modules/
 .claude-plugin/
 docs/
 
+
+# Playwright E2E test credentials (contains real passwords)
+.env.test.local

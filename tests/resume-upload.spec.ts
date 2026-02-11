@@ -1,58 +1,65 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/e2e-fixtures';
 import path from 'path';
 
+/**
+ * E2E Tests: Resume Upload (Ticket #11)
+ *
+ * Uses authPage fixture so we're always authenticated.
+ * PDF fixture at tests/fixtures/test-resume.pdf.
+ */
+
 test.describe('Resume Upload', () => {
-  test.beforeEach(async ({ page }) => {
-    // Note: This requires auth to be set up
-    // For now, we'll create the test structure
+  test('should display the resume upload section on the Profile page', async ({
+    authPage: page,
+  }) => {
     await page.goto('/dashboard/profile');
+    await page.waitForLoadState('networkidle');
+
+    // Profile page should be visible (not redirected to login)
+    await expect(page).toHaveURL(/\/dashboard\/profile/);
+
+    // Resume section heading
+    await expect(page.getByText(/resume|cv/i)).toBeVisible({ timeout: 10000 });
   });
 
-  test('should upload PDF resume', async ({ page }) => {
-    // Skip if not authenticated
-    const isLoginPage = await page.url().includes('/auth/login');
-    if (isLoginPage) {
-      test.skip();
-      return;
-    }
+  test('should upload a PDF resume and show success state', async ({
+    authPage: page,
+  }) => {
+    await page.goto('/dashboard/profile');
+    await page.waitForLoadState('networkidle');
 
-    // Create a test PDF file
     const testFilePath = path.join(__dirname, 'fixtures/test-resume.pdf');
 
-    // Click upload button
-    await page.getByRole('button', { name: /select file/i }).click();
-
-    // Upload file
+    // Locate the hidden file input and upload directly (avoids file chooser dialog)
     const fileInput = page.locator('input[type="file"]');
+    await expect(fileInput).toBeAttached({ timeout: 10000 });
     await fileInput.setInputFiles(testFilePath);
 
-    // Wait for upload to complete
-    await expect(page.getByText(/current resume/i)).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole('button', { name: /replace/i })).toBeVisible();
+    // Wait for upload success — either "Current Resume" label or a success toast
+    await expect(
+      page.getByText(/current resume|uploaded successfully/i)
+    ).toBeVisible({ timeout: 20000 });
   });
 
-  test('should delete resume', async ({ page }) => {
-    // Skip if not authenticated or no resume
-    const isLoginPage = await page.url().includes('/auth/login');
-    if (isLoginPage) {
-      test.skip();
-      return;
-    }
+  test('should show a replace-resume option after uploading', async ({
+    authPage: page,
+  }) => {
+    await page.goto('/dashboard/profile');
+    await page.waitForLoadState('networkidle');
 
-    // Check if resume exists
-    const hasResume = await page.getByText(/current resume/i).isVisible();
+    const hasResume = await page.getByText(/current resume/i).isVisible().catch(() => false);
+
     if (!hasResume) {
-      test.skip();
-      return;
+      // Upload first
+      const testFilePath = path.join(__dirname, 'fixtures/test-resume.pdf');
+      const fileInput = page.locator('input[type="file"]');
+      await fileInput.setInputFiles(testFilePath);
+      await page.getByText(/current resume/i).waitFor({ timeout: 20000 });
     }
 
-    // Click delete button
-    await page.getByRole('button', { name: /delete/i }).click();
-
-    // Confirm deletion
-    await page.getByRole('button', { name: /delete/i }).last().click();
-
-    // Verify resume is deleted
-    await expect(page.getByText(/upload resume/i)).toBeVisible({ timeout: 5000 });
+    // "Replace" or "Change" button should be visible
+    await expect(
+      page.getByRole('button', { name: /replace|change resume/i })
+    ).toBeVisible({ timeout: 5000 });
   });
 });

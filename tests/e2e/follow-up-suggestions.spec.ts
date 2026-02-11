@@ -10,10 +10,10 @@
  * so this test focuses on UI rendering and structure
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/e2e-fixtures';
 
 test.describe('Follow-Up Suggestions', () => {
-  test.skip('should display follow-up suggestions card on application detail page', async ({
+  test('should display follow-up suggestions card on application detail page', async ({
     page,
   }) => {
     // Note: This test is skipped because it requires:
@@ -59,7 +59,7 @@ test.describe('Follow-Up Suggestions', () => {
     // await expect(page.locator('[role="article"]')).toHaveCount({ min: 2, max: 4 });
   });
 
-  test.skip('component structure check - requires manual setup', async ({ page }) => {
+  test('component structure check - requires manual setup', async ({ authPage: page }) => {
     // This test documents the expected DOM structure for manual verification
 
     // Expected empty state structure:
@@ -88,7 +88,7 @@ test.describe('Follow-Up Suggestions', () => {
 });
 
 test.describe('Mobile Responsiveness', () => {
-  test.skip('should be responsive on mobile viewports', async ({ page }) => {
+  test('should be responsive on mobile viewports', async ({ authPage: page }) => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
 

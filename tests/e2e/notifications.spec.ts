@@ -1,4 +1,4 @@
-import { test, expect, devices } from '@playwright/test';
+import { test, expect, devices } from '../fixtures/e2e-fixtures';
 
 /**
  * Notification System E2E Tests
@@ -8,20 +8,20 @@ import { test, expect, devices } from '@playwright/test';
  */
 
 test.describe('Notification Bell & Dropdown', () => {
-  test.skip('should show bell icon in desktop header', async ({ page }) => {
+  test('should show bell icon in desktop header', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     const bell = page.getByRole('button', { name: /notifications/i });
     await expect(bell).toBeVisible();
   });
 
-  test.skip('should show unread badge when notifications exist', async ({ page }) => {
+  test('should show unread badge when notifications exist', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     const badge = page.locator('[class*="bg-red-500"]');
     // Badge should be present if there are unread notifications
     await expect(badge).toBeVisible();
   });
 
-  test.skip('should open dropdown on bell click', async ({ page }) => {
+  test('should open dropdown on bell click', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     const bell = page.getByRole('button', { name: /notifications/i });
     await bell.click();
@@ -29,7 +29,7 @@ test.describe('Notification Bell & Dropdown', () => {
     await expect(page.getByText('Notifications')).toBeVisible();
   });
 
-  test.skip('should show "You\'re all caught up!" when no notifications', async ({ page }) => {
+  test('should show "You\'re all caught up!" when no notifications', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     const bell = page.getByRole('button', { name: /notifications/i });
     await bell.click();
@@ -38,7 +38,7 @@ test.describe('Notification Bell & Dropdown', () => {
     await expect(emptyState).toBeVisible();
   });
 
-  test.skip('should navigate to full page via "View All" link', async ({ page }) => {
+  test('should navigate to full page via "View All" link', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     const bell = page.getByRole('button', { name: /notifications/i });
     await bell.click();
@@ -49,7 +49,7 @@ test.describe('Notification Bell & Dropdown', () => {
 });
 
 test.describe('Notifications Full Page', () => {
-  test.skip('should render notifications page with filter tabs', async ({ page }) => {
+  test('should render notifications page with filter tabs', async ({ authPage: page }) => {
     await page.goto('/dashboard/notifications');
     await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible();
     // Filter tabs
@@ -61,13 +61,13 @@ test.describe('Notifications Full Page', () => {
     await expect(page.getByText('Achievements')).toBeVisible();
   });
 
-  test.skip('should show empty state with correct message', async ({ page }) => {
+  test('should show empty state with correct message', async ({ authPage: page }) => {
     await page.goto('/dashboard/notifications');
     const emptyState = page.getByText("You're all caught up!");
     await expect(emptyState).toBeVisible();
   });
 
-  test.skip('should filter notifications by type', async ({ page }) => {
+  test('should filter notifications by type', async ({ authPage: page }) => {
     await page.goto('/dashboard/notifications');
     const interviewsTab = page.getByText('Interviews');
     await interviewsTab.click();
@@ -77,14 +77,14 @@ test.describe('Notifications Full Page', () => {
     ).toBeVisible();
   });
 
-  test.skip('should mark all read via button', async ({ page }) => {
+  test('should mark all read via button', async ({ authPage: page }) => {
     await page.goto('/dashboard/notifications');
     const markAllBtn = page.getByRole('button', { name: /mark all read/i });
     // Should exist (may be disabled if no unread)
     await expect(markAllBtn).toBeVisible();
   });
 
-  test.skip('should show loading skeleton while fetching', async ({ page }) => {
+  test('should show loading skeleton while fetching', async ({ authPage: page }) => {
     await page.goto('/dashboard/notifications');
     // Loading skeleton should briefly appear
     const skeleton = page.locator('[class*="animate-pulse"]');
@@ -94,19 +94,19 @@ test.describe('Notifications Full Page', () => {
 });
 
 test.describe('Notification Preferences', () => {
-  test.skip('should render preferences section on profile page', async ({ page }) => {
+  test('should render preferences section on profile page', async ({ authPage: page }) => {
     await page.goto('/dashboard/profile');
     await expect(page.getByText('Notification Preferences')).toBeVisible();
   });
 
-  test.skip('should show in-app, email, and push sections', async ({ page }) => {
+  test('should show in-app, email, and push sections', async ({ authPage: page }) => {
     await page.goto('/dashboard/profile');
     await expect(page.getByText('In-App Notifications')).toBeVisible();
     await expect(page.getByText('Email Notifications')).toBeVisible();
     await expect(page.getByText('Push Notifications')).toBeVisible();
   });
 
-  test.skip('should toggle a preference switch', async ({ page }) => {
+  test('should toggle a preference switch', async ({ authPage: page }) => {
     await page.goto('/dashboard/profile');
     // Find a switch in the notification preferences section
     const switches = page.locator('[role="switch"]');
@@ -120,7 +120,7 @@ test.describe('Notification Preferences', () => {
 });
 
 // Mobile notification tests - using viewport override instead of test.use in describe
-test.skip('mobile: should show bell icon in mobile header', async ({ browser }) => {
+test('mobile: should show bell icon in mobile header', async ({ browser }) => {
   const context = await browser.newContext({ ...devices['Pixel 5'] });
   const page = await context.newPage();
   await page.goto('/dashboard');
@@ -129,7 +129,7 @@ test.skip('mobile: should show bell icon in mobile header', async ({ browser }) 
   await context.close();
 });
 
-test.skip('mobile: should open dropdown on mobile', async ({ browser }) => {
+test('mobile: should open dropdown on mobile', async ({ browser }) => {
   const context = await browser.newContext({ ...devices['Pixel 5'] });
   const page = await context.newPage();
   await page.goto('/dashboard');
@@ -139,7 +139,7 @@ test.skip('mobile: should open dropdown on mobile', async ({ browser }) => {
   await context.close();
 });
 
-test.skip('mobile: should render full page with responsive layout', async ({ browser }) => {
+test('mobile: should render full page with responsive layout', async ({ browser }) => {
   const context = await browser.newContext({ ...devices['Pixel 5'] });
   const page = await context.newPage();
   await page.goto('/dashboard/notifications');
@@ -150,7 +150,7 @@ test.skip('mobile: should render full page with responsive layout', async ({ bro
 });
 
 test.describe('Notification Integration', () => {
-  test.skip('should show notification after status change to interviewing', async ({ page }) => {
+  test('should show notification after status change to interviewing', async ({ authPage: page }) => {
     // Navigate to an application detail page
     await page.goto('/dashboard');
     // Click on first application

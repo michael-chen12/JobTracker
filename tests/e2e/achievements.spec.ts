@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/e2e-fixtures';
 
 /**
  * E2E Tests for Wins Celebration System (Ticket #20)
@@ -11,7 +11,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Wins Celebration System', () => {
   // Smoke test: Verify wins page route exists and is accessible
-  test('should have accessible wins page route', async ({ page }) => {
+  test('should have accessible wins page route', async ({ authPage: page }) => {
     await page.goto('http://localhost:3000/dashboard/wins');
 
     // Should either show login page or wins page (if authenticated)
@@ -48,7 +48,7 @@ test.describe('Wins Celebration System', () => {
   }
 
   // Skip tests requiring authentication until test auth is set up
-  test.skip('should celebrate first application submission', async ({ page }) => {
+  test('should celebrate first application submission', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     // Create first application
     await createApplication(page, 'Acme Corp', 'Software Engineer');
@@ -81,7 +81,7 @@ test.describe('Wins Celebration System', () => {
     await expect(page.getByText('First Application!')).toBeVisible();
   });
 
-  test.skip('should celebrate first interview on status change', async ({ page }) => {
+  test('should celebrate first interview on status change', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     // Switch to Kanban view
     await page.click('button:has-text("Kanban")');
@@ -118,7 +118,7 @@ test.describe('Wins Celebration System', () => {
     }
   });
 
-  test.skip('should display wins section on dashboard', async ({ page }) => {
+  test('should display wins section on dashboard', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     // Verify WinsSection is visible
     await expect(page.getByText('Recent Wins')).toBeVisible();
@@ -135,7 +135,7 @@ test.describe('Wins Celebration System', () => {
     }
   });
 
-  test.skip('should navigate to wins page via navigation', async ({ page }) => {
+  test('should navigate to wins page via navigation', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     // Click on "Wins" navigation link
     await page.click('a:has-text("Wins")');
@@ -150,7 +150,7 @@ test.describe('Wins Celebration System', () => {
     ).toBeVisible();
   });
 
-  test.skip('should display wins dashboard page correctly', async ({ page }) => {
+  test('should display wins dashboard page correctly', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     // Navigate to wins page
     await page.goto('/dashboard/wins');
@@ -177,7 +177,7 @@ test.describe('Wins Celebration System', () => {
     }
   });
 
-  test.skip('should prevent duplicate achievements', async ({ page }) => {
+  test('should prevent duplicate achievements', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     // Create first application
     await createApplication(page, 'Company A', 'Position A');
@@ -204,7 +204,7 @@ test.describe('Wins Celebration System', () => {
     await expect(celebrationModal).not.toBeVisible({ timeout: 2000 });
   });
 
-  test.skip('should show confetti animation in celebration modal', async ({ page }) => {
+  test('should show confetti animation in celebration modal', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     // This test verifies the confetti animation is rendered
     // Create application to trigger celebration
@@ -227,7 +227,7 @@ test.describe('Wins Celebration System', () => {
     }
   });
 
-  test.skip('should mark achievement as celebrated after closing modal', async ({ page }) => {
+  test('should mark achievement as celebrated after closing modal', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     // Create application
     await createApplication(page, 'Celebration Test', 'Test Position');

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/e2e-fixtures';
 
 /**
  * E2E Tests for Email Correspondence (Ticket #25)
@@ -17,7 +17,7 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Email Correspondence', () => {
-  test.skip('should log inbound correspondence and verify it appears in list', async ({ page }) => {
+  test('should log inbound correspondence and verify it appears in list', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     await page.waitForSelector('table');
     await page.locator('table tbody tr').first().click();
@@ -49,7 +49,7 @@ test.describe('Email Correspondence', () => {
     await expect(page.locator('text=From: hr@techcompany.com')).toBeVisible();
   });
 
-  test.skip('should log outbound correspondence and verify direction badge', async ({ page }) => {
+  test('should log outbound correspondence and verify direction badge', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     await page.waitForSelector('table');
     await page.locator('table tbody tr').first().click();
@@ -75,7 +75,7 @@ test.describe('Email Correspondence', () => {
     await expect(page.locator('text=Thank You - Follow Up')).toBeVisible();
   });
 
-  test.skip('should delete a correspondence entry with confirmation dialog', async ({ page }) => {
+  test('should delete a correspondence entry with confirmation dialog', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     await page.waitForSelector('table');
     await page.locator('table tbody tr').first().click();
@@ -102,7 +102,7 @@ test.describe('Email Correspondence', () => {
     await expect(page.locator('text=Correspondence deleted')).toBeVisible();
   });
 
-  test.skip('should filter by direction (inbound only)', async ({ page }) => {
+  test('should filter by direction (inbound only)', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     await page.waitForSelector('table');
     await page.locator('table tbody tr').first().click();
@@ -122,7 +122,7 @@ test.describe('Email Correspondence', () => {
     await expect(sentBadges).toHaveCount(0);
   });
 
-  test.skip('should filter by date range', async ({ page }) => {
+  test('should filter by date range', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     await page.waitForSelector('table');
     await page.locator('table tbody tr').first().click();
@@ -145,7 +145,7 @@ test.describe('Email Correspondence', () => {
     await page.locator('button:has-text("Clear Filters")').click();
   });
 
-  test.skip('should show empty state when no correspondence exists', async ({ page }) => {
+  test('should show empty state when no correspondence exists', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     await page.waitForSelector('table');
     await page.locator('table tbody tr').first().click();
@@ -161,7 +161,7 @@ test.describe('Email Correspondence', () => {
     }
   });
 
-  test.skip('should show count badge with correct number', async ({ page }) => {
+  test('should show count badge with correct number', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     await page.waitForSelector('table');
     await page.locator('table tbody tr').first().click();
@@ -184,7 +184,7 @@ test.describe('Email Correspondence', () => {
     await expect(badge).toContainText('2');
   });
 
-  test.skip('should be mobile responsive at 375px viewport', async ({ page }) => {
+  test('should be mobile responsive at 375px viewport', async ({ authPage: page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/dashboard');
     await page.waitForSelector('table');

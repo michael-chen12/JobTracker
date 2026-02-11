@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from '../fixtures/e2e-fixtures';
 
 // Performance & SEO smoke tests
 // These tests verify the observability and SEO features added in Ticket #30.
@@ -11,17 +11,17 @@ test.describe("SEO & Metadata", () => {
     "Requires running dev/prod server — run manually with: npx playwright test tests/e2e/performance.spec.ts"
   );
 
-  test("landing page returns 200", async ({ page }) => {
+  test("landing page returns 200", async ({ authPage: page }) => {
     const response = await page.goto("/");
     expect(response?.status()).toBe(200);
   });
 
-  test("landing page has correct title", async ({ page }) => {
+  test("landing page has correct title", async ({ authPage: page }) => {
     await page.goto("/");
     await expect(page).toHaveTitle(/Job Application Tracker/);
   });
 
-  test("landing page has og:title meta tag", async ({ page }) => {
+  test("landing page has og:title meta tag", async ({ authPage: page }) => {
     await page.goto("/");
     const ogTitle = await page
       .locator('meta[property="og:title"]')
@@ -29,7 +29,7 @@ test.describe("SEO & Metadata", () => {
     expect(ogTitle).toContain("Job Application Tracker");
   });
 
-  test("landing page has og:image meta tag", async ({ page }) => {
+  test("landing page has og:image meta tag", async ({ authPage: page }) => {
     await page.goto("/");
     const ogImage = await page
       .locator('meta[property="og:image"]')
@@ -38,7 +38,7 @@ test.describe("SEO & Metadata", () => {
     expect(ogImage).toContain("opengraph-image");
   });
 
-  test("landing page has twitter:card meta tag", async ({ page }) => {
+  test("landing page has twitter:card meta tag", async ({ authPage: page }) => {
     await page.goto("/");
     const twitterCard = await page
       .locator('meta[name="twitter:card"]')
@@ -56,7 +56,7 @@ test.describe("SEO & Metadata", () => {
     expect(ogUrl).toBeTruthy();
   });
 
-  test("landing page has preconnect link for Supabase", async ({ page }) => {
+  test("landing page has preconnect link for Supabase", async ({ authPage: page }) => {
     await page.goto("/");
     const preconnect = await page
       .locator('link[rel="preconnect"]')

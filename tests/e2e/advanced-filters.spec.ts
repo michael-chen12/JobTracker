@@ -1,6 +1,7 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '../fixtures/e2e-fixtures';
+import type { Page } from '../fixtures/e2e-fixtures';
 
-const AUTH_STATE_PATH = process.env.PLAYWRIGHT_AUTH_STATE;
+// Auth is handled globally via tests/.auth/user.json (see playwright.config.ts)
 const FILTER_DEBOUNCE_MS = 700;
 
 function uniqueName(prefix: string) {
@@ -39,24 +40,18 @@ async function pickDate(page: Page, pickerIndex: number) {
 }
 
 test.describe('Advanced Filtering', () => {
-  test.skip(
-    !AUTH_STATE_PATH,
-    'Set PLAYWRIGHT_AUTH_STATE to an authenticated storage-state JSON file before running this suite.'
-  );
 
-  test.use({ storageState: AUTH_STATE_PATH });
-
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ authPage: page }) => {
     await page.goto('/dashboard');
     await expect(page).toHaveURL(/\/dashboard/);
     await waitForResultsOrEmptyState(page);
   });
 
-  test('keeps advanced panel collapsed by default', async ({ page }) => {
+  test('keeps advanced panel collapsed by default', async ({ authPage: page }) => {
     await expect(page.getByPlaceholder('e.g., San Francisco')).not.toBeVisible();
   });
 
-  test('expands and collapses advanced filters panel', async ({ page }) => {
+  test('expands and collapses advanced filters panel', async ({ authPage: page }) => {
     const toggle = page.getByRole('button', { name: /Advanced Filters/i });
     await toggle.click();
     await expect(page.getByPlaceholder('e.g., San Francisco')).toBeVisible();
@@ -65,7 +60,7 @@ test.describe('Advanced Filtering', () => {
     await expect(page.getByPlaceholder('e.g., San Francisco')).not.toBeVisible();
   });
 
-  test('applies and clears location filter', async ({ page }) => {
+  test('applies and clears location filter', async ({ authPage: page }) => {
     await ensureAdvancedFiltersExpanded(page);
     const locationInput = page.getByPlaceholder('e.g., San Francisco');
 
@@ -78,7 +73,7 @@ test.describe('Advanced Filtering', () => {
     await expect(page).not.toHaveURL(/location=/);
   });
 
-  test('toggles job type filter on and off', async ({ page }) => {
+  test('toggles job type filter on and off', async ({ authPage: page }) => {
     await ensureAdvancedFiltersExpanded(page);
 
     await page.getByRole('button', { name: 'Full-time' }).click();
@@ -90,7 +85,7 @@ test.describe('Advanced Filtering', () => {
     await expect(page).not.toHaveURL(/jobType=/);
   });
 
-  test('toggles priority filter on and off', async ({ page }) => {
+  test('toggles priority filter on and off', async ({ authPage: page }) => {
     await ensureAdvancedFiltersExpanded(page);
 
     await page.getByRole('button', { name: 'High' }).click();
@@ -102,7 +97,7 @@ test.describe('Advanced Filtering', () => {
     await expect(page).not.toHaveURL(/priority=/);
   });
 
-  test('applies min salary only', async ({ page }) => {
+  test('applies min salary only', async ({ authPage: page }) => {
     await ensureAdvancedFiltersExpanded(page);
     await page.getByPlaceholder('e.g., 80000').fill('120000');
 
@@ -111,7 +106,7 @@ test.describe('Advanced Filtering', () => {
     await expect(page).not.toHaveURL(/salaryMax=/);
   });
 
-  test('applies max salary only', async ({ page }) => {
+  test('applies max salary only', async ({ authPage: page }) => {
     await ensureAdvancedFiltersExpanded(page);
     await page.getByPlaceholder('e.g., 150000').fill('180000');
 
@@ -120,7 +115,7 @@ test.describe('Advanced Filtering', () => {
     await expect(page).not.toHaveURL(/salaryMin=/);
   });
 
-  test('applies min and max salary range together', async ({ page }) => {
+  test('applies min and max salary range together', async ({ authPage: page }) => {
     await ensureAdvancedFiltersExpanded(page);
     await page.getByPlaceholder('e.g., 80000').fill('100000');
     await page.getByPlaceholder('e.g., 150000').fill('150000');
@@ -130,7 +125,7 @@ test.describe('Advanced Filtering', () => {
     await expect(page).toHaveURL(/salaryMax=150000/);
   });
 
-  test('applies applied-date-from filter', async ({ page }) => {
+  test('applies applied-date-from filter', async ({ authPage: page }) => {
     await ensureAdvancedFiltersExpanded(page);
     await pickDate(page, 0);
 
@@ -138,7 +133,7 @@ test.describe('Advanced Filtering', () => {
     await expect(page).toHaveURL(/appliedDateFrom=/);
   });
 
-  test('applies applied-date-to filter', async ({ page }) => {
+  test('applies applied-date-to filter', async ({ authPage: page }) => {
     await ensureAdvancedFiltersExpanded(page);
     await pickDate(page, 1);
 
@@ -146,7 +141,7 @@ test.describe('Advanced Filtering', () => {
     await expect(page).toHaveURL(/appliedDateTo=/);
   });
 
-  test('combines multiple advanced filters with AND logic', async ({ page }) => {
+  test('combines multiple advanced filters with AND logic', async ({ authPage: page }) => {
     await ensureAdvancedFiltersExpanded(page);
     await page.getByPlaceholder('e.g., San Francisco').fill('San Francisco');
     await page.getByRole('button', { name: 'Full-time' }).click();
@@ -158,7 +153,7 @@ test.describe('Advanced Filtering', () => {
     await expect(page).toHaveURL(/priority=high/);
   });
 
-  test('clears advanced filters while preserving basic filters', async ({ page }) => {
+  test('clears advanced filters while preserving basic filters', async ({ authPage: page }) => {
     await page
       .getByPlaceholder('Search by company or position...')
       .fill('Google');
@@ -183,7 +178,7 @@ test.describe('Advanced Filtering', () => {
     await expect(page).not.toHaveURL(/jobType=/);
   });
 
-  test('clears all filters from toolbar', async ({ page }) => {
+  test('clears all filters from toolbar', async ({ authPage: page }) => {
     await page.getByPlaceholder('Search by company or position...').fill('Meta');
     await ensureAdvancedFiltersExpanded(page);
     await page.getByPlaceholder('e.g., San Francisco').fill('Austin');
@@ -198,7 +193,7 @@ test.describe('Advanced Filtering', () => {
     ).toHaveValue('');
   });
 
-  test('updates active advanced filter count badge', async ({ page }) => {
+  test('updates active advanced filter count badge', async ({ authPage: page }) => {
     const advancedButton = page.getByRole('button', { name: /Advanced Filters/i });
 
     await expect(advancedButton.locator('span.rounded-full')).not.toBeVisible();
@@ -218,11 +213,11 @@ test.describe('Advanced Filtering', () => {
     await expect(advancedButton.locator('span.rounded-full')).not.toBeVisible();
   });
 
-  test('disables save-filters button when there are no active filters', async ({ page }) => {
+  test('disables save-filters button when there are no active filters', async ({ authPage: page }) => {
     await expect(page.getByRole('button', { name: /Save Filters/i })).toBeDisabled();
   });
 
-  test('creates and applies tag filter', async ({ page }) => {
+  test('creates and applies tag filter', async ({ authPage: page }) => {
     await ensureAdvancedFiltersExpanded(page);
     await page.getByRole('button', { name: /^Tags/ }).click();
 
@@ -245,7 +240,7 @@ test.describe('Advanced Filtering', () => {
     await expect(page).toHaveURL(/tags=/);
   });
 
-  test('saves and loads a filter preset', async ({ page }) => {
+  test('saves and loads a filter preset', async ({ authPage: page }) => {
     const presetName = uniqueName('Preset');
 
     await page.getByPlaceholder('Search by company or position...').fill('Tech');
@@ -274,7 +269,7 @@ test.describe('Advanced Filtering', () => {
     await expect(page).toHaveURL(/jobType=remote/);
   });
 
-  test('renames an existing filter preset', async ({ page }) => {
+  test('renames an existing filter preset', async ({ authPage: page }) => {
     const originalName = uniqueName('RenameFrom');
     const updatedName = `${originalName}-Updated`;
 
@@ -303,7 +298,7 @@ test.describe('Advanced Filtering', () => {
     await expect(page.getByRole('button', { name: updatedName })).toBeVisible();
   });
 
-  test('deletes a saved preset', async ({ page }) => {
+  test('deletes a saved preset', async ({ authPage: page }) => {
     const presetName = uniqueName('DeleteMe');
 
     await page.getByPlaceholder('Search by company or position...').fill('Data');
@@ -325,7 +320,7 @@ test.describe('Advanced Filtering', () => {
     await expect(page.getByRole('button', { name: presetName })).not.toBeVisible();
   });
 
-  test('persists filters in URL after reload', async ({ page }) => {
+  test('persists filters in URL after reload', async ({ authPage: page }) => {
     await ensureAdvancedFiltersExpanded(page);
     await page.getByPlaceholder('e.g., San Francisco').fill('New York');
     await page.getByRole('button', { name: 'Full-time' }).click();
@@ -343,7 +338,7 @@ test.describe('Advanced Filtering', () => {
     await expect(page.getByPlaceholder('e.g., 80000')).toHaveValue('120000');
   });
 
-  test('supports back and forward navigation for filter state', async ({ page }) => {
+  test('supports back and forward navigation for filter state', async ({ authPage: page }) => {
     await ensureAdvancedFiltersExpanded(page);
     const locationInput = page.getByPlaceholder('e.g., San Francisco');
 
@@ -364,7 +359,7 @@ test.describe('Advanced Filtering', () => {
     await expect(page).toHaveURL(secondUrl);
   });
 
-  test('shows empty state for impossible filter combinations', async ({ page }) => {
+  test('shows empty state for impossible filter combinations', async ({ authPage: page }) => {
     await ensureAdvancedFiltersExpanded(page);
     await page.getByPlaceholder('e.g., San Francisco').fill('NonexistentCity12345');
     await page.getByPlaceholder('e.g., 80000').fill('999999999');
@@ -375,7 +370,7 @@ test.describe('Advanced Filtering', () => {
     ).toBeVisible();
   });
 
-  test('stacks filters properly on a mobile viewport', async ({ page }) => {
+  test('stacks filters properly on a mobile viewport', async ({ authPage: page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/dashboard');
     await waitForResultsOrEmptyState(page);
@@ -395,14 +390,8 @@ test.describe('Advanced Filtering', () => {
 });
 
 test.describe('Filter Performance', () => {
-  test.skip(
-    !AUTH_STATE_PATH,
-    'Set PLAYWRIGHT_AUTH_STATE to an authenticated storage-state JSON file before running this suite.'
-  );
 
-  test.use({ storageState: AUTH_STATE_PATH });
-
-  test('completes a filter update in acceptable time', async ({ page }) => {
+  test('completes a filter update in acceptable time', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     await ensureAdvancedFiltersExpanded(page);
 

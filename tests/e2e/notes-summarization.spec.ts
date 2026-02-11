@@ -11,7 +11,7 @@
  * 5. Rate limit → verify error handling
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/e2e-fixtures';
 
 test.describe('Notes Summarization', () => {
   // Skip these tests if not authenticated (requires user session)
@@ -21,16 +21,7 @@ test.describe('Notes Summarization', () => {
     return !process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD;
   }, 'Authentication required for notes summarization tests');
 
-  test.beforeEach(async ({ page }) => {
-    // Login (implement based on your auth flow)
-    // await page.goto('/auth/login');
-    // await page.fill('[name="email"]', process.env.TEST_USER_EMAIL!);
-    // await page.fill('[name="password"]', process.env.TEST_USER_PASSWORD!);
-    // await page.click('button[type="submit"]');
-    // await page.waitForURL('/dashboard');
-  });
-
-  test('should show "Summarize Notes" button when notes exist', async ({ page }) => {
+  test('should show "Summarize Notes" button when notes exist', async ({ authPage: page }) => {
     // Navigate to dashboard
     await page.goto('/dashboard');
 
@@ -52,7 +43,7 @@ test.describe('Notes Summarization', () => {
     await expect(page.locator('button:has-text("Summarize Notes")')).toBeVisible();
   });
 
-  test('should generate summary when button clicked', async ({ page }) => {
+  test('should generate summary when button clicked', async ({ authPage: page }) => {
     // Setup: Navigate to application with notes
     await page.goto('/dashboard');
 
@@ -90,15 +81,15 @@ test.describe('Notes Summarization', () => {
     await expect(page.locator('text=Follow-up Needs')).toBeVisible();
 
     // Verify at least one insight is displayed
-    await expect(page.locator('h4:has-text("Key Insights") + ul li')).toHaveCount(
-      { min: 1 }
-    );
+    // Verify at least one insight bullet exists
+    const insightItems = page.locator('h4:has-text("Key Insights") + ul li');
+    expect(await insightItems.count()).toBeGreaterThanOrEqual(1);
 
     // Verify success toast
     await expect(page.locator('text=Summary Generated')).toBeVisible();
   });
 
-  test('should show "new notes" badge after adding notes', async ({ page }) => {
+  test('should show "new notes" badge after adding notes', async ({ authPage: page }) => {
     // Setup: Application with existing summary
     await page.goto('/dashboard');
     const applicationCard = page.locator('[data-testid="application-card"]').first();
@@ -130,7 +121,7 @@ test.describe('Notes Summarization', () => {
     await expect(page.locator('text=2 new notes')).toBeVisible({ timeout: 5000 });
   });
 
-  test('should update summary when re-summarize clicked', async ({ page }) => {
+  test('should update summary when re-summarize clicked', async ({ authPage: page }) => {
     // Setup: Application with summary and new notes
     await page.goto('/dashboard');
     const applicationCard = page.locator('[data-testid="application-card"]').first();
@@ -154,7 +145,7 @@ test.describe('Notes Summarization', () => {
     await expect(page.locator('text=new note')).not.toBeVisible();
   });
 
-  test('should hide summary button when no notes exist', async ({ page }) => {
+  test('should hide summary button when no notes exist', async ({ authPage: page }) => {
     // Create new application without notes
     await page.goto('/dashboard');
     await page.click('text=New Application');
@@ -171,7 +162,7 @@ test.describe('Notes Summarization', () => {
     await expect(page.locator('text=No notes yet')).toBeVisible();
   });
 
-  test('should handle rate limit gracefully', async ({ page }) => {
+  test('should handle rate limit gracefully', async ({ authPage: page }) => {
     // This test would require triggering rate limit (50 summaries/hour)
     // In practice, this would be tested with mocked backend
 
@@ -191,7 +182,7 @@ test.describe('Notes Summarization', () => {
     }
   });
 
-  test('should display summary metadata correctly', async ({ page }) => {
+  test('should display summary metadata correctly', async ({ authPage: page }) => {
     // Setup: Application with summary
     await page.goto('/dashboard');
     const applicationCard = page.locator('[data-testid="application-card"]').first();
@@ -202,7 +193,7 @@ test.describe('Notes Summarization', () => {
     await expect(page.locator('text=notes analyzed')).toBeVisible();
   });
 
-  test('should show structured sections with icons', async ({ page }) => {
+  test('should show structured sections with icons', async ({ authPage: page }) => {
     // Setup: Application with summary
     await page.goto('/dashboard');
     const applicationCard = page.locator('[data-testid="application-card"]').first();
@@ -224,7 +215,7 @@ test.describe('Notes Summarization', () => {
     await expect(followUpSection.locator('svg')).toHaveClass(/Lightbulb/);
   });
 
-  test('should work on mobile viewport', async ({ page }) => {
+  test('should work on mobile viewport', async ({ authPage: page }) => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
 
@@ -246,7 +237,7 @@ test.describe('Notes Summarization', () => {
     }
   });
 
-  test('should preserve summary when navigating away and back', async ({ page }) => {
+  test('should preserve summary when navigating away and back', async ({ authPage: page }) => {
     // Navigate to application
     await page.goto('/dashboard');
     const applicationCard = page.locator('[data-testid="application-card"]').first();
@@ -279,7 +270,7 @@ test.describe('Notes Summary Component Integration', () => {
     return !process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD;
   }, 'Authentication required for notes summary component tests');
 
-  test('should render NotesSummaryCard above notes list', async ({ page }) => {
+  test('should render NotesSummaryCard above notes list', async ({ authPage: page }) => {
     // This test verifies the visual layout
     await page.goto('/dashboard');
     const applicationCard = page.locator('[data-testid="application-card"]').first();

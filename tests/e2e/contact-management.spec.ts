@@ -9,17 +9,10 @@
  * - Edge cases: Concurrent operations, network errors
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/e2e-fixtures';
 
 test.describe('Contact Management - Happy Path', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to login and authenticate
-    await page.goto('/auth/login');
-    // TODO: Add authentication flow once implemented
-    // For now, assume user is authenticated
-  });
-
-  test('should create, view, and delete a contact', async ({ page }) => {
+  test('should create, view, and delete a contact', async ({ authPage: page }) => {
     // Navigate to contacts page
     await page.goto('/dashboard/contacts');
 
@@ -74,7 +67,7 @@ test.describe('Contact Management - Happy Path', () => {
     await expect(page.getByText('John Doe')).not.toBeVisible();
   });
 
-  test('should search contacts', async ({ page }) => {
+  test('should search contacts', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
 
     // Create test contact first
@@ -103,7 +96,7 @@ test.describe('Contact Management - Happy Path', () => {
 });
 
 test.describe('Contact Management - Contact Linking', () => {
-  test('should link contact to application', async ({ page }) => {
+  test('should link contact to application', async ({ authPage: page }) => {
     // First, create a contact
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /add contact/i }).click();
@@ -147,7 +140,7 @@ test.describe('Contact Management - Contact Linking', () => {
     await expect(page.getByText(/no referral contact linked/i)).toBeVisible();
   });
 
-  test('should show contact linking in application detail', async ({ page }) => {
+  test('should show contact linking in application detail', async ({ authPage: page }) => {
     await page.goto('/dashboard/applications');
     await page.getByRole('link').first().click();
 
@@ -163,7 +156,7 @@ test.describe('Contact Management - Contact Linking', () => {
 });
 
 test.describe('Contact Management - Security Tests', () => {
-  test('should reject XSS attempts in LinkedIn URL', async ({ page }) => {
+  test('should reject XSS attempts in LinkedIn URL', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /add contact/i }).click();
 
@@ -179,7 +172,7 @@ test.describe('Contact Management - Security Tests', () => {
     await expect(page.getByText('Attacker')).not.toBeVisible();
   });
 
-  test('should reject SSRF attempts in LinkedIn URL', async ({ page }) => {
+  test('should reject SSRF attempts in LinkedIn URL', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /add contact/i }).click();
 
@@ -192,7 +185,7 @@ test.describe('Contact Management - Security Tests', () => {
     await expect(page.getByText(/invalid linkedin url/i)).toBeVisible();
   });
 
-  test('should sanitize input fields', async ({ page }) => {
+  test('should sanitize input fields', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /add contact/i }).click();
 
@@ -210,7 +203,7 @@ test.describe('Contact Management - Security Tests', () => {
     await expect(page.getByRole('heading', { name: /contacts/i })).toBeVisible();
   });
 
-  test('should prevent unauthorized access (IDOR)', async ({ page, context }) => {
+  test('should prevent unauthorized access (IDOR)', async ({ authPage: page, context }) => {
     // This test assumes you have multiple users
     // For now, we'll test that direct API access is protected
 
@@ -223,7 +216,7 @@ test.describe('Contact Management - Security Tests', () => {
 });
 
 test.describe('Contact Management - Edge Cases', () => {
-  test('should handle very long names correctly', async ({ page }) => {
+  test('should handle very long names correctly', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /add contact/i }).click();
 
@@ -245,7 +238,7 @@ test.describe('Contact Management - Edge Cases', () => {
     await expect(page.getByText(/100 characters/i)).toBeVisible();
   });
 
-  test('should handle special characters in name', async ({ page }) => {
+  test('should handle special characters in name', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /add contact/i }).click();
 
@@ -257,7 +250,7 @@ test.describe('Contact Management - Edge Cases', () => {
     await expect(page.getByText("O'Brien-Smith Jr.")).toBeVisible();
   });
 
-  test('should handle empty search gracefully', async ({ page }) => {
+  test('should handle empty search gracefully', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
 
     // Search with empty string
@@ -267,7 +260,7 @@ test.describe('Contact Management - Edge Cases', () => {
     await expect(page.getByRole('heading', { name: /contacts/i })).toBeVisible();
   });
 
-  test('should handle concurrent contact creation', async ({ page }) => {
+  test('should handle concurrent contact creation', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
 
     // Open two forms (not realistic in UI, but tests race condition)
@@ -288,7 +281,7 @@ test.describe('Contact Management - Edge Cases', () => {
     await expect(page.getByText('Contact 2')).toBeVisible();
   });
 
-  test('should handle network errors gracefully', async ({ page }) => {
+  test('should handle network errors gracefully', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
 
     // Simulate offline mode
@@ -305,7 +298,7 @@ test.describe('Contact Management - Edge Cases', () => {
     await page.context().setOffline(false);
   });
 
-  test('should preserve form data on validation error', async ({ page }) => {
+  test('should preserve form data on validation error', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /add contact/i }).click();
 
@@ -327,7 +320,7 @@ test.describe('Contact Management - Edge Cases', () => {
 test.describe('Contact Management - Mobile Responsiveness', () => {
   test.use({ viewport: { width: 375, height: 667 } }); // iPhone SE
 
-  test('should display contacts in card layout on mobile', async ({ page }) => {
+  test('should display contacts in card layout on mobile', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
 
     // Should use card layout on mobile (not table)
@@ -344,7 +337,7 @@ test.describe('Contact Management - Mobile Responsiveness', () => {
     }
   });
 
-  test('should open form dialog full-screen on mobile', async ({ page }) => {
+  test('should open form dialog full-screen on mobile', async ({ authPage: page }) => {
     await page.goto('/dashboard/contacts');
     await page.getByRole('button', { name: /add contact/i }).click();
 

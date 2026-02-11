@@ -11,17 +11,10 @@
  * 4. Accessibility of referral components
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/e2e-fixtures';
 
 test.describe('Referral Tracking - Component Structure', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to login
-    await page.goto('/auth/login');
-    // TODO: Add authentication flow once implemented
-    // For now, tests will verify component structure when available
-  });
-
-  test.skip('should have referral filter button in dashboard toolbar', async ({ page }) => {
+  test('should have referral filter button in dashboard toolbar', async ({ authPage: page }) => {
     // This test requires authentication
     await page.goto('/dashboard');
 
@@ -30,7 +23,7 @@ test.describe('Referral Tracking - Component Structure', () => {
     await expect(referralFilterButton).toBeVisible();
   });
 
-  test.skip('should display referral column in table view', async ({ page }) => {
+  test('should display referral column in table view', async ({ authPage: page }) => {
     // This test requires authentication
     await page.goto('/dashboard');
 
@@ -45,7 +38,7 @@ test.describe('Referral Tracking - Component Structure', () => {
     await expect(referralHeader).toBeVisible();
   });
 
-  test.skip('should have accessible referral filter with radio options', async ({ page }) => {
+  test('should have accessible referral filter with radio options', async ({ authPage: page }) => {
     // This test requires authentication
     await page.goto('/dashboard');
 
@@ -63,7 +56,7 @@ test.describe('Referral Tracking - Component Structure', () => {
     await expect(allOption).toBeVisible();
   });
 
-  test.skip('should display referral impact section on contact detail page', async ({ page }) => {
+  test('should display referral impact section on contact detail page', async ({ authPage: page }) => {
     // This test requires authentication and a contact with referrals
     // Navigate to a contact detail page (would need to create test data)
     await page.goto('/dashboard/contacts');

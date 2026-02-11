@@ -14,17 +14,10 @@
  * Tests also require data seeding for burnout detection scenarios.
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/e2e-fixtures';
 
 test.describe('Activity Insights & Burnout Indicators', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to login page
-    await page.goto('/auth/login');
-    // TODO: Add authentication flow once implemented
-    // For now, tests verify component structure when available
-  });
-
-  test.skip('should display Your Journey section on dashboard', async ({ page }) => {
+  test('should display Your Journey section on dashboard', async ({ authPage: page }) => {
     // Navigate to dashboard
     await page.goto('/dashboard');
 
@@ -58,7 +51,7 @@ test.describe('Activity Insights & Burnout Indicators', () => {
     await expect(contentArea).toBeVisible();
   });
 
-  test.skip('should display burnout warning when high rejection rate', async ({ page }) => {
+  test('should display burnout warning when high rejection rate', async ({ authPage: page }) => {
     // Setup: This test requires seeding the database with:
     // - 10 applications with 8 in 'rejected' status
     // - Created within the last 30 days
@@ -94,7 +87,7 @@ test.describe('Activity Insights & Burnout Indicators', () => {
     await expect(warningCard).toHaveClass(/border-amber|border-yellow/);
   });
 
-  test.skip('should display weekly activity summary in Your Journey', async ({ page }) => {
+  test('should display weekly activity summary in Your Journey', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 
@@ -123,7 +116,7 @@ test.describe('Activity Insights & Burnout Indicators', () => {
     await expect(updatesCount).toBeVisible();
   });
 
-  test.skip('should show weekly summary widget on analytics page', async ({ page }) => {
+  test('should show weekly summary widget on analytics page', async ({ authPage: page }) => {
     await page.goto('/dashboard/analytics');
     await page.waitForLoadState('networkidle');
 
@@ -147,7 +140,7 @@ test.describe('Activity Insights & Burnout Indicators', () => {
     expect(count).toBeGreaterThanOrEqual(3);
   });
 
-  test.skip('should display Lucide icons instead of emojis on wins page', async ({ page }) => {
+  test('should display Lucide icons instead of emojis on wins page', async ({ authPage: page }) => {
     await page.goto('/dashboard/wins');
     await page.waitForLoadState('networkidle');
 
@@ -177,12 +170,16 @@ test.describe('Activity Insights & Burnout Indicators', () => {
       // Check first card doesn't contain emoji Unicode ranges
       const firstCardText = await achievementCards.first().textContent();
       // Emojis are typically in Unicode ranges U+1F300–U+1F9FF
-      const hasEmoji = /[\u{1F300}-\u{1F9FF}]/u.test(firstCardText || '');
+      // Detect emoji using character code range (avoids ES2018 unicode regex flag TS1501)
+      const hasEmoji = (firstCardText || '').split('').some((ch) => {
+        const cp = ch.codePointAt(0) ?? 0;
+        return cp >= 0x1F300 && cp <= 0x1F9FF;
+      });
       expect(hasEmoji).toBe(false);
     }
   });
 
-  test.skip('should respect privacy control when insights disabled', async ({ page }) => {
+  test('should respect privacy control when insights disabled', async ({ authPage: page }) => {
     // Setup: This test requires:
     // 1. Setting insights_enabled to false in user_profiles table
     // 2. Having some achievements in the database
@@ -226,7 +223,7 @@ test.describe('Activity Insights & Burnout Indicators', () => {
     }
   });
 
-  test.skip('should show multiple insights when conditions are met', async ({ page }) => {
+  test('should show multiple insights when conditions are met', async ({ authPage: page }) => {
     // Setup: This test requires seeding data for multiple insight triggers:
     // - High rejection rate (8+ rejections in last 10 apps)
     // - Active streak (applications in last 3 consecutive weeks)
@@ -254,7 +251,7 @@ test.describe('Activity Insights & Burnout Indicators', () => {
     await expect(page.getByText(/Consistency|Streak|Active/i)).toBeVisible();
   });
 
-  test.skip('should navigate between dashboard and analytics showing consistent data', async ({ page }) => {
+  test('should navigate between dashboard and analytics showing consistent data', async ({ authPage: page }) => {
     // Test data consistency between pages
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');

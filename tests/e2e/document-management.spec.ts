@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/e2e-fixtures';
 
 /**
  * E2E Tests for Document Management (Ticket #24)
@@ -16,7 +16,7 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Document Management', () => {
-  test.skip('should upload 3 files, verify list, and delete one', async ({ page }) => {
+  test('should upload 3 files, verify list, and delete one', async ({ authPage: page }) => {
     // Navigate to an application detail page
     await page.goto('/dashboard');
     await page.waitForSelector('table');
@@ -64,7 +64,7 @@ test.describe('Document Management', () => {
     await expect(page.locator('text=(2)')).toBeVisible();
   });
 
-  test.skip('should show inline preview for PDF', async ({ page }) => {
+  test('should show inline preview for PDF', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     await page.waitForSelector('table');
     await page.locator('table tbody tr').first().click();
@@ -84,7 +84,7 @@ test.describe('Document Management', () => {
     await expect(page.locator('iframe')).toBeVisible();
   });
 
-  test.skip('should show inline preview for image', async ({ page }) => {
+  test('should show inline preview for image', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     await page.waitForSelector('table');
     await page.locator('table tbody tr').first().click();
@@ -106,7 +106,7 @@ test.describe('Document Management', () => {
     await expect(page.locator('[role="dialog"] img')).toBeVisible();
   });
 
-  test.skip('should reject files exceeding 10MB', async ({ page }) => {
+  test('should reject files exceeding 10MB', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     await page.waitForSelector('table');
     await page.locator('table tbody tr').first().click();
@@ -118,7 +118,7 @@ test.describe('Document Management', () => {
     await expect(page.locator('text=Documents')).toBeVisible();
   });
 
-  test.skip('should download document via signed URL', async ({ page }) => {
+  test('should download document via signed URL', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     await page.waitForSelector('table');
     await page.locator('table tbody tr').first().click();
@@ -136,7 +136,7 @@ test.describe('Document Management', () => {
     await expect(downloadButton).toBeEnabled();
   });
 
-  test.skip('should show storage usage bar after upload', async ({ page }) => {
+  test('should show storage usage bar after upload', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     await page.waitForSelector('table');
     await page.locator('table tbody tr').first().click();
@@ -152,7 +152,7 @@ test.describe('Document Management', () => {
     await expect(page.locator('[role="progressbar"]')).toBeVisible();
   });
 
-  test.skip('should display document type badges correctly', async ({ page }) => {
+  test('should display document type badges correctly', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     await page.waitForSelector('table');
     await page.locator('table tbody tr').first().click();
@@ -170,7 +170,7 @@ test.describe('Document Management', () => {
     await expect(page.locator('text=Cover Letter').last()).toBeVisible();
   });
 
-  test.skip('should be mobile responsive at 375px viewport', async ({ page }) => {
+  test('should be mobile responsive at 375px viewport', async ({ authPage: page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/dashboard');
     await page.waitForSelector('table, [data-testid="kanban"]');
@@ -190,7 +190,7 @@ test.describe('Document Management', () => {
     await expect(uploadButton).toBeVisible();
   });
 
-  test.skip('should show empty state when no documents', async ({ page }) => {
+  test('should show empty state when no documents', async ({ authPage: page }) => {
     await page.goto('/dashboard');
     await page.waitForSelector('table');
     await page.locator('table tbody tr').first().click();
